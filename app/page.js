@@ -1,94 +1,62 @@
-import Image from "next/image";
+import Link from "next/link";
 import styles from "./page.module.css";
 
-export default function Home() {
+async function getData() {
+  const res = await fetch("https://api.mosaiquefm.net/api/ar/200/1/articles");
+  // The return value is *not* serialized
+  // You can return Date, Map, Set, etc.
+
+  if (!res.ok) {
+    // This will activate the closest `error.js` Error Boundary
+    throw new Error("Failed to fetch data");
+  }
+
+  return res.json();
+}
+export default async function Home() {
+  const data = await getData();
+  console.log("data", data);
   return (
     <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+      <h1 className="font-bold text-5xl">الاخبار</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 md:p-6">
+        {data &&
+          data?.items?.map((item) => (
+            <div
+              key={item?.id}
+              className="relative group overflow-hidden rounded-lg"
+            >
+              <Link
+                className="absolute inset-0 z-10"
+                href={`https://www.mosaiquefm.net/${item?.link}`}
+                target="_blank"
+              >
+                <span className="sr-only">View</span>
+              </Link>
+              <img
+                alt="Article 1"
+                className="object-cover w-full h-60"
+                height={300}
+                src={item?.image}
+                style={{
+                  aspectRatio: "400/300",
+                  objectFit: "cover",
+                }}
+                width={400}
+              />
+              <div className="bg-white p-4 dark:bg-gray-950">
+                <h3 className="font-semibold text-lg md:text-xl">
+                  {item?.title}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {item?.startPublish?.date}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {item?.intro}
+                </p>
+              </div>
+            </div>
+          ))}
       </div>
     </main>
   );
