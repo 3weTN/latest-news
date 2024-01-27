@@ -8,7 +8,6 @@ export async function fetchBeers(page: number) {
   try {
     const response = await fetch(apiUrl);
     const data = await response.json();
-    console.log("data---------", data);
     return data?.items as Article[];
   } catch (error) {
     console.error("Error fetching data:", error);
