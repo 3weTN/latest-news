@@ -2,7 +2,7 @@
 import { Article } from "@/types";
 
 export async function fetchBeers(page: number) {
-  const perPage = 24;
+  const perPage = 25;
   const apiUrl = `https://api.mosaiquefm.net/api/ar/${perPage}/${page}/articles`;
 
   try {
