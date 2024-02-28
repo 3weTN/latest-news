@@ -3,34 +3,37 @@
 import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { Spinner } from "@/components/ui/spinner";
-import { fetchBeers } from "@/actions/fetch-products";
+import { fetchPosts } from "@/actions/fetch-posts";
 import { Article } from "@/types";
-import { Beers } from "@/components/beers";
+import { Posts } from "@/components/posts";
 
 export function LoadMore() {
-  const [beers, setBeers] = useState<Article[]>([]);
+  const [posts, setPosts] = useState<Article[]>([]);
   const [page, setPage] = useState(1);
 
   const { ref, inView } = useInView();
 
-  const loadMoreBeers = async () => {
-    // Once the page 8 is reached repeat the process all over again.
+  const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
+  const loadMorePosts = async () => {
+    // Once the page 8 is reached repeat the process all over again.
+    await delay(2000);
     const nextPage = (page % 7) + 1;
-    const newProducts = (await fetchBeers(nextPage)) ?? [];
-    setBeers((prevProducts: Article[]) => [...prevProducts, ...newProducts]);
+    const newPosts = (await fetchPosts(nextPage)) ?? [];
+    setPosts((prevProducts: Article[]) => [...prevProducts, ...newPosts]);
     setPage(nextPage);
   };
 
   useEffect(() => {
     if (inView) {
-      loadMoreBeers();
+      loadMorePosts();
     }
   }, [inView]);
 
   return (
     <>
-      <Beers beers={beers} />
+      <Posts posts={posts} />
       <div
         className="flex justify-center items-center p-4 col-span-1 sm:col-span-2 md:col-span-3"
         ref={ref}
