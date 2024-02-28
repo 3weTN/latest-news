@@ -18,7 +18,7 @@ export function Posts({ posts }: PostProps) {
       {posts ? (
         posts.map((article) => (
           <Card key={article.id}>
-            <CardContent className="flex flex-col items-center justify-center p-2">
+            <CardContent className="flex flex-col items-center justify-center">
               <img src={article.image} alt={article.title} />
             </CardContent>
             <CardFooter className="text-center flex flex-col p-2">
