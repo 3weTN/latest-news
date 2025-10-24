@@ -12,21 +12,23 @@ function generateSiteMap(articles: Article[]) {
        <changefreq>hourly</changefreq>
        <priority>1.0</priority>
      </url>
-     ${articles
-       .map((article) => {
-         const publishDate = article.startPublish
-           ? new Date(article.startPublish).toISOString()
-           : new Date().toISOString();
-         return `
-       <url>
-           <loc>${baseUrl}/article/${article.slug}</loc>
-           <lastmod>${publishDate}</lastmod>
-           <changefreq>daily</changefreq>
-           <priority>0.8</priority>
-       </url>
-     `;
-       })
-       .join("")}
+    ${articles
+      .map((article) => {
+        // Safely parse publish date; avoid invalid Date -> toISOString() errors
+        const raw = (article as any).startPublish;
+        const d = raw ? new Date(raw) : null;
+        const publishDate = d && !isNaN(d.getTime()) ? d.toISOString() : null;
+        const slug = article.slug || article.id;
+        return `
+      <url>
+          <loc>${baseUrl}/article/${encodeURIComponent(String(slug))}</loc>
+          ${publishDate ? `<lastmod>${publishDate}</lastmod>` : ""}
+          <changefreq>daily</changefreq>
+          <priority>0.8</priority>
+      </url>
+    `;
+      })
+      .join("")}
    </urlset>
  `;
 }
