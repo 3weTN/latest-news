@@ -1,3 +1,6 @@
+"use client";
+
+import { fetchPosts } from "@/actions/fetch-posts";
 import {
   Card,
   CardContent,
@@ -5,17 +8,46 @@ import {
   CardFooter,
   CardTitle,
 } from "@/components/ui/card";
-import { OptimizedImage } from "@/components/ui/optimized-image";
+import { Spinner } from "@/components/ui/spinner";
 import { Article } from "@/types";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useInView } from "react-intersection-observer";
 
-export interface PostProps {
-  posts: Article[] | null;
-  /** When false, don't render the large featured hero (useful for infinite-loaded batches) */
-  showFeatured?: boolean;
+interface Props {
+  initialPosts: Article[] | null;
 }
 
-export function Posts({ posts, showFeatured = true }: PostProps) {
+export default function PostsClient({ initialPosts }: Props) {
+  const [posts, setPosts] = useState<Article[]>(initialPosts ?? []);
+  const [page, setPage] = useState<number>(1);
+  const [loading, setLoading] = useState(false);
+  const [hasLoadedMore, setHasLoadedMore] = useState(false);
+
+  const { ref, inView } = useInView();
+
+  useEffect(() => {
+    if (inView && !loading) {
+      loadMore();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inView]);
+
+  const loadMore = async () => {
+    setLoading(true);
+    try {
+      const nextPage = (page % 7) + 1;
+      const newPosts = (await fetchPosts(nextPage)) ?? [];
+      setPosts((p) => [...p, ...newPosts]);
+      setPage(nextPage);
+      setHasLoadedMore(true);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const hrefFor = (a: Article) => {
     const slugOrId = a.slug ?? String(a.id);
     return `/article/${encodeURIComponent(slugOrId)}`;
@@ -25,18 +57,12 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
     return <div className="text-xl font-bold">No posts available</div>;
   }
 
-  let featured: Article | null = null;
-  let gridPosts: Article[] = posts;
-
-  if (showFeatured && posts.length > 0) {
-    featured = posts[0];
-    gridPosts = posts.slice(1);
-  }
+  const featured = !hasLoadedMore && posts.length > 0 ? posts[0] : null;
+  const gridPosts = !hasLoadedMore ? posts.slice(1) : posts;
 
   return (
     <section className="w-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Featured article */}
         {featured && (
           <article className="mb-8">
             <Link
@@ -46,12 +72,9 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
             >
               <div className="relative w-full h-64 md:h-96 bg-gray-100">
                 {featured.image ? (
-                  <OptimizedImage
+                  <img
                     src={featured.image}
                     alt={featured.seoAlt || featured.title}
-                    fill
-                    priority // Featured image should load quickly
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
@@ -75,7 +98,6 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
           </article>
         )}
 
-        {/* Grid of remaining articles */}
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4">
           {gridPosts.map((article) => (
             <Card
@@ -90,12 +112,10 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
                 <CardContent className="p-0">
                   <div className="w-full h-44 bg-gray-100 overflow-hidden">
                     {article.image ? (
-                      <OptimizedImage
+                      <img
                         src={article.image}
                         alt={article.seoAlt || article.title}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
@@ -130,6 +150,10 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
               </Link>
             </Card>
           ))}
+        </div>
+
+        <div ref={ref} className="flex justify-center items-center p-4">
+          {loading ? <Spinner /> : <Spinner />}
         </div>
       </div>
     </section>
