@@ -50,7 +50,8 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
                     src={featured.image}
                     alt={featured.seoAlt || featured.title}
                     fill
-                    priority // Featured image should load quickly
+                    priority
+                    useBlur
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />

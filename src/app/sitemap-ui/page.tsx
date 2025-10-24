@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export const dynamic = "force-static";
 
-export default async function SitemapPage() {
+export default async function SitemapPageUI() {
   // Fetch a few pages of posts to show in the UI sitemap
   const pagesToFetch = 4;
   const articles: Article[] = [];
@@ -16,7 +16,7 @@ export default async function SitemapPage() {
 
   return (
     <main className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-4">Sitemap</h1>
+      <h1 className="text-2xl font-bold mb-4">Sitemap (UI)</h1>
 
       <p className="mb-6 text-sm text-muted-foreground">
         This page lists recent articles. For the machine-readable sitemap visit{" "}
