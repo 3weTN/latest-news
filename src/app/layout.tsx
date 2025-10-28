@@ -6,27 +6,29 @@ import GoogleAnalytics from "./GoogleAnalytics";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mosaiquefm.net"),
+  metadataBase: new URL("https://actualite-news-tunisie.vercel.app"),
   title: {
-    default: "MosaiqueFM News - Latest Tunisian News Headlines",
-    template: "%s | MosaiqueFM News",
+    default: "Tunisian News - Latest Tunisian News Headlines",
+    template: "%s | Tunisian News",
   },
   description:
-    "Stay updated with the latest Tunisian news, breaking stories, and in-depth coverage from MosaiqueFM, Tunisia's leading news source",
+    "Stay updated with the latest Tunisian news, breaking stories, and in-depth coverage from Tunisian News, Tunisia's leading news source",
   keywords: [
     "Tunisia news",
     "Tunisian news",
-    "MosaiqueFM",
     "breaking news",
     "أخبار تونس",
-    "موزاييك",
+    "Actualités Tunisiennes",
+    "Actualités Tunisie en direct",
+    "Actualités Tunisiennes en direct en ligne",
+    "Actualités Tunisie en direct en ligne et en direct",
   ],
-  authors: [{ name: "MosaiqueFM" }],
+  authors: [{ name: "News Tunisia" }],
   openGraph: {
     type: "website",
     locale: "ar_TN",
     alternateLocale: "fr_TN",
-    siteName: "MosaiqueFM News",
+    siteName: "Tunisian News",
   },
   robots: {
     index: true,
@@ -41,7 +43,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@MosaiqueFM",
+    site: "News Tunisia",
   },
   verification: {
     google: "g3oJQuqmWzE08HwnHwi8YudSH7JEmkYPg7nb8wPZFeM", // You'll need to replace this with the actual code
@@ -62,13 +64,8 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "NewsMediaOrganization",
-              name: "MosaiqueFM",
-              url: "https://mosaiquefm.net",
-              logo: "https://mosaiquefm.net/logo.png",
-              sameAs: [
-                "https://facebook.com/mosaiquefm",
-                "https://twitter.com/mosaiquefm",
-              ],
+              name: "Tunisian News",
+              url: "https://actualite-news-tunisie.vercel.app/",
             }),
           }}
         />

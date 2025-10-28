@@ -58,7 +58,7 @@ export async function generateMetadata(
       images: imageUrl ? [imageUrl] : undefined,
     },
     alternates: {
-      canonical: `https://mosaiquefm.net/article/${slug}`,
+      canonical: `https://actualite-news-tunisie.vercel.app/article/${slug}`,
     },
   };
 }

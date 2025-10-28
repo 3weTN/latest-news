@@ -11,7 +11,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages (only include fields supported by Next's Sitemap type)
   const staticPages: MetadataRoute.Sitemap = [
     {
-      url: "https://mosaiquefm.net",
+      url: "https://actualite-news-tunisie.vercel.app",
       lastModified: new Date(),
     },
   ];
@@ -28,7 +28,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Create article entries using only the allowed sitemap fields
   const articles: MetadataRoute.Sitemap = allArticles.map((article) => {
     const entry: MetadataRoute.Sitemap[number] = {
-      url: `https://mosaiquefm.net/article/${article.slug || article.id}`,
+      url: `https://actualite-news-tunisie.vercel.app/article/${
+        article.slug || article.id
+      }`,
     };
 
     const publishDate = getArticlePublishDate(article);

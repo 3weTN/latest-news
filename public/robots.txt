@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://mosaiquefm.net/sitemap.xml
+Sitemap: https://actualite-news-tunisie.vercel.app/sitemap.xml
 
 # Crawl-delay for all bots
 Crawl-delay: 1
