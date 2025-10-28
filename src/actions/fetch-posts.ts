@@ -6,12 +6,18 @@ export type ArticleDetailResult = {
   attemptedUrls: string[];
 };
 
+const FETCH_OPTIONS = {
+  next: {
+    revalidate: 300,
+  },
+} as const;
+
 export async function fetchPosts(page: number) {
   const perPage = 24;
   const apiUrl = `https://api.mosaiquefm.net/api/ar/${perPage}/${page}/articles`;
 
   try {
-    const response = await fetch(apiUrl);
+    const response = await fetch(apiUrl, FETCH_OPTIONS);
     const data = await response.json();
     return data?.items as Article[];
   } catch (error) {
@@ -37,7 +43,7 @@ export async function fetchArticleBySlug(
       attemptedUrls.push(detailUrl);
       try {
         console.log("Fetching article detail from", detailUrl);
-        const res = await fetch(detailUrl);
+        const res = await fetch(detailUrl, FETCH_OPTIONS);
         if (!res.ok) continue;
         const data = await res.json();
         const article: any = data?.item ?? data?.article ?? data?.data ?? data;

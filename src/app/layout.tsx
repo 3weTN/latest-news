@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import GoogleAnalytics from "./GoogleAnalytics";
+import { SITE_URL } from "@/config/site";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://actualite-news-tunisie.vercel.app"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Tunisian News - Latest Tunisian News Headlines",
     template: "%s | Tunisian News",
@@ -65,7 +66,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "NewsMediaOrganization",
               name: "Tunisian News",
-              url: "https://actualite-news-tunisie.vercel.app/",
+              url: `${SITE_URL}/`,
             }),
           }}
         />
