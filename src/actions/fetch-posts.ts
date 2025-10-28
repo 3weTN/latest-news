@@ -11,7 +11,6 @@ export async function fetchPosts(page: number) {
   const apiUrl = `https://api.mosaiquefm.net/api/ar/${perPage}/${page}/articles`;
 
   try {
-    console.log("Fetching posts from", apiUrl);
     const response = await fetch(apiUrl);
     const data = await response.json();
     return data?.items as Article[];

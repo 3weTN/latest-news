@@ -1,5 +1,6 @@
 import { fetchPosts } from "@/actions/fetch-posts";
 import { Article } from "@/types";
+import { getArticlePublishDate } from "@/lib/article-date";
 import Link from "next/link";
 
 export const dynamic = "force-static";
@@ -34,8 +35,13 @@ export default async function SitemapPageUI() {
         {articles.map((a) => {
           const slug = a.slug || String(a.id);
           const href = `/article/${encodeURIComponent(slug)}`;
-          const lastMod = a.startPublish
-            ? new Date(a.startPublish).toLocaleString()
+          const publishDate = getArticlePublishDate(a);
+          const lastMod = publishDate
+            ? new Intl.DateTimeFormat(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short",
+                timeZone: publishDate.timeZone,
+              }).format(publishDate.date)
             : "";
 
           return (

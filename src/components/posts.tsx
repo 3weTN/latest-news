@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { OptimizedImage } from "@/components/ui/optimized-image";
+import { getArticlePublishDate } from "@/lib/article-date";
 import { Article } from "@/types";
 import Link from "next/link";
 
@@ -78,8 +79,10 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
 
         {/* Grid of remaining articles */}
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4">
-          {gridPosts.map((article) => (
-            <Card
+          {gridPosts.map((article) => {
+            const publishDate = getArticlePublishDate(article);
+            return (
+              <Card
               key={article.id}
               className="overflow-hidden transform transition hover:-translate-y-1 hover:shadow-lg shadow-sm"
             >
@@ -106,6 +109,14 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
                   </div>
                 </CardContent>
 
+                {publishDate && (
+                  <div className="px-4 pt-2 text-xs text-muted-foreground text-right">
+                    <time dateTime={publishDate.iso} className="whitespace-nowrap">
+                      {publishDate.display}
+                    </time>
+                  </div>
+                )}
+
                 <CardFooter className="flex flex-col items-start p-4 gap-2 text-right">
                   <CardTitle className="text-base sm:text-lg leading-tight line-clamp-2">
                     {article.title}
@@ -118,7 +129,7 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
                   </CardDescription>
 
                   <div className="mt-2 w-full flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {article.label && (
                         <span className="px-2 py-0.5 bg-muted rounded-full">
                           {article.label}
@@ -130,7 +141,8 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
                 </CardFooter>
               </Link>
             </Card>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

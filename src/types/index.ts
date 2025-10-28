@@ -1,3 +1,9 @@
+export interface ArticleStartPublish {
+  date: string;
+  timezone_type?: number;
+  timezone?: string;
+}
+
 export interface Article {
   tid: number;
   label: string;
@@ -9,7 +15,13 @@ export interface Article {
   summary?: string;
   seoAlt: string;
   image: string;
-  startPublish: string | number | Date;
+  startPublish?:
+    | string
+    | number
+    | Date
+    | ArticleStartPublish
+    | null
+    | undefined;
   date?: string;
   created?: string;
   updated?: string;
