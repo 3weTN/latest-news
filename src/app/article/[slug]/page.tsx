@@ -157,6 +157,15 @@ export default async function Page({ params }: Props) {
     (article as any).description ||
     "";
 
+  const mosaiqueBaseUrl = "https://www.mosaiquefm.net";
+  const sourceUrl = article.link
+    ? article.link.startsWith("http")
+      ? article.link
+      : `${mosaiqueBaseUrl}${article.link.startsWith("/") ? "" : "/"}${
+          article.link
+        }`
+    : undefined;
+
   const publishDate = getArticlePublishDate(article);
 
   const updatedDate = article.updated
@@ -215,6 +224,13 @@ export default async function Page({ params }: Props) {
     articleSection: article.category || article.label || undefined,
 
     url: `${SITE_URL}/article/${slug}`,
+
+    ...(sourceUrl
+      ? {
+          isBasedOn: sourceUrl,
+          sameAs: sourceUrl,
+        }
+      : {}),
   };
 
   const showDebug =
@@ -242,6 +258,7 @@ export default async function Page({ params }: Props) {
               className="w-full h-full object-cover"
               fill
               priority // Article main image should load quickly
+              fetchPriority="high"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
             />
           </div>
@@ -266,10 +283,10 @@ export default async function Page({ params }: Props) {
             <p>{plainText}</p>
           )}
 
-          {article.link && (
+          {sourceUrl && (
             <p className="mt-4">
               <a
-                href={article.link}
+                href={sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-indigo-600"

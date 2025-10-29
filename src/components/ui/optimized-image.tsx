@@ -15,6 +15,7 @@ export interface OptimizedImageProps {
   alt: string;
   className?: string;
   priority?: boolean;
+  fetchPriority?: "high" | "low" | "auto";
   sizes?: string;
   fill?: boolean;
   width?: number;
@@ -28,6 +29,7 @@ export function OptimizedImage({
   alt,
   className = "",
   priority = false,
+  fetchPriority,
   sizes = "100vw",
   fill = false,
   width,
@@ -39,7 +41,15 @@ export function OptimizedImage({
 
   // If it's not from our domain, render a regular img tag with loading="lazy"
   if (!isRemoteImage) {
-    return <img src={src} alt={alt} className={className} loading="lazy" />;
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={className}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+      />
+    );
   }
 
   // For remote images, use Next.js Image with optimization
@@ -53,6 +63,7 @@ export function OptimizedImage({
       alt={alt}
       className={className}
       priority={priority}
+      fetchPriority={fetchPriority}
       sizes={sizes}
       fill={fill}
       width={!fill ? width : undefined}

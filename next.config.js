@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
+const ONE_YEAR = 31536000;
+
 const nextConfig = {
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       {
@@ -24,7 +27,47 @@ const nextConfig = {
       },
     ],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
-    formats: ["image/webp"],
+    formats: ["image/avif", "image/webp"],
+  },
+  async headers() {
+    return [
+      {
+        source: "/_next/static/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: `public, max-age=${ONE_YEAR}, immutable`,
+          },
+        ],
+      },
+      {
+        source: "/_next/image/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: `public, max-age=${ONE_YEAR}, immutable`,
+          },
+        ],
+      },
+      {
+        source: "/fonts/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: `public, max-age=${ONE_YEAR}, immutable`,
+          },
+        ],
+      },
+      {
+        source: "/(.*)\\.(js|css|svg|png|jpg|jpeg|gif|webp|avif|ico)$",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: `public, max-age=${ONE_YEAR}, immutable`,
+          },
+        ],
+      },
+    ];
   },
 };
 

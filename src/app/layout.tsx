@@ -4,7 +4,7 @@ import "./globals.css";
 import GoogleAnalytics from "./GoogleAnalytics";
 import { SITE_URL } from "@/config/site";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -59,6 +59,32 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <head>
+        <link rel="dns-prefetch" href="https://content.mosaiquefm.net" />
+        <link rel="dns-prefetch" href="https://cdn.mosaiquefm.net" />
+        <link rel="dns-prefetch" href="https://api.mosaiquefm.net" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+        <link
+          rel="preconnect"
+          href="https://content.mosaiquefm.net"
+          crossOrigin=""
+        />
+        <link
+          rel="preconnect"
+          href="https://cdn.mosaiquefm.net"
+          crossOrigin=""
+        />
+        <link rel="preconnect" href="https://api.mosaiquefm.net" crossOrigin="" />
+        <link
+          rel="preconnect"
+          href="https://www.googletagmanager.com"
+          crossOrigin=""
+        />
+        <link
+          rel="preconnect"
+          href="https://www.google-analytics.com"
+          crossOrigin=""
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
