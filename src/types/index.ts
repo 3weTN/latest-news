@@ -32,5 +32,5 @@ export interface Article {
   content?: string;
   body?: string;
   article?: string;
-  source?: "mosaique" | "rtci";
+  source?: string;
 }

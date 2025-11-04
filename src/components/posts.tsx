@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/card";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import { getArticlePublishDate } from "@/lib/article-date";
+import { NEWS_SOURCES, type NewsSource } from "@/config/sources";
 import { Article } from "@/types";
 import Link from "next/link";
 
@@ -17,8 +18,8 @@ export interface PostProps {
 }
 
 export function Posts({ posts, showFeatured = true }: PostProps) {
-  const hrefFor = (a: Article) => {
-    const slugOrId = a.slug ?? String(a.id);
+  const hrefFor = (article: Article) => {
+    const slugOrId = article.slug ?? String(article.id);
     return `/article/${encodeURIComponent(slugOrId)}`;
   };
 
@@ -81,6 +82,9 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4">
           {gridPosts.map((article) => {
             const publishDate = getArticlePublishDate(article);
+            const sourceInfo = NEWS_SOURCES.find(
+              (source: NewsSource) => source.id === article.source
+            );
             return (
               <Card
                 key={article.id}
@@ -129,13 +133,18 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
                     </CardDescription>
 
                     <div className="mt-2 w-full flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {article.label && (
-                          <span className="px-2 py-0.5 bg-muted rounded-full">
-                            {article.label}
-                          </span>
-                        )}
-                      </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {article.label && (
+                        <span className="px-2 py-0.5 bg-muted rounded-full">
+                          {article.label}
+                        </span>
+                      )}
+                      {sourceInfo && (
+                        <span className="px-2 py-0.5 border rounded-full text-[0.65rem] uppercase tracking-wide">
+                          {sourceInfo.name}
+                        </span>
+                      )}
+                    </div>
                       <div className="text-indigo-600 font-medium">
                         {"Read \u2192"}
                       </div>

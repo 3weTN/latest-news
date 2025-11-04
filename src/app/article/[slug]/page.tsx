@@ -6,6 +6,8 @@ import { getArticlePublishDate } from "@/lib/article-date";
 
 import { SITE_URL } from "@/config/site";
 
+import Link from "next/link";
+
 import { Metadata, ResolvingMetadata } from "next";
 
 type Props = {
@@ -265,6 +267,15 @@ export default async function Page({ params }: Props) {
         )}
 
         <div className="prose prose-lg max-w-none text-right">
+          <div className="mb-6 text-left">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 rounded-full border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100"
+            >
+              ← Back to home
+            </Link>
+          </div>
+
           {showDebug && (
             <div className="mb-4 text-sm text-gray-500 text-left">
               <strong>Debug - attempted detail URLs:</strong>

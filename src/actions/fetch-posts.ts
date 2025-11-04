@@ -1,5 +1,11 @@
 "use server";
 
+import {
+  NEWS_SOURCES,
+  ApiNewsSource,
+  NewsSource,
+  RssNewsSource,
+} from "@/config/sources";
 import { Article } from "@/types";
 import { XMLParser } from "fast-xml-parser";
 
@@ -8,14 +14,14 @@ export type ArticleDetailResult = {
   attemptedUrls: string[];
 };
 
-const MOSAIQUE_SOURCE = "mosaique" as const;
-const RTCI_SOURCE = "rtci" as const;
-const MOSAIQUE_PER_PAGE = 24;
-const RTCI_FEED_URL = "https://www.rtci.tn/articles/rss";
+export interface FetchPostsOptions {
+  sources?: string[];
+}
 
 const FETCH_OPTIONS = {
+  cache: "no-store" as const,
   next: {
-    revalidate: 300,
+    revalidate: 0,
   },
 } as const;
 
@@ -53,6 +59,15 @@ const hashString = (input: string): number => {
   return Math.abs(hash);
 };
 
+const fillEndpointTemplate = (
+  template: string,
+  values: Record<string, string | number | undefined>
+): string =>
+  template.replace(/\{(\w+)\}/g, (_, token) => {
+    const value = values[token];
+    return encodeURIComponent(value !== undefined ? String(value) : "");
+  });
+
 const getArticleTimestamp = (article: Article): number => {
   const candidates: Array<Article["startPublish"] | Article["date"]> = [
     article.startPublish,
@@ -89,13 +104,19 @@ const getArticleTimestamp = (article: Article): number => {
   return 0;
 };
 
-const mapMosaiqueArticle = (article: Article): Article => ({
+const applyMaxAgeFilter = (articles: Article[], source: NewsSource): Article[] => {
+  if (!source.maxAgeDays) return articles;
+  const cutoff = Date.now() - source.maxAgeDays * 24 * 60 * 60 * 1000;
+  return articles.filter((article) => getArticleTimestamp(article) >= cutoff);
+};
+
+const mapMosaiqueArticle = (article: Article, sourceId: string): Article => ({
   ...article,
-  source: MOSAIQUE_SOURCE,
+  source: sourceId,
   link2: article.link2 ?? article.link ?? "",
 });
 
-const parseRtciItem = (item: any): Article | null => {
+const parseRssItem = (item: any, source: RssNewsSource): Article | null => {
   if (!item) return null;
 
   const rawLink = textContent(item.link || (item.guid && item.guid["#text"]) || item.guid);
@@ -114,8 +135,8 @@ const parseRtciItem = (item: any): Article | null => {
   const categoryValue = Array.isArray(item.category)
     ? textContent(item.category[0])
     : textContent(item.category);
-  const category = categoryValue.trim() || "RTCI";
-  const labelSlug = slugify(category) || "rtci";
+  const category = categoryValue.trim() || source.name;
+  const labelSlug = slugify(category) || source.id;
 
   const guidValue =
     textContent(item.guid?.["#text"]) ||
@@ -123,9 +144,9 @@ const parseRtciItem = (item: any): Article | null => {
     link ||
     title;
   const id = hashString(guidValue || link || title);
-  const fallbackSlug = `rtci-${id}`;
+  const fallbackSlug = `${source.id}-${id}`;
   const rawSlug = slugify(title);
-  const slugValue = rawSlug ? `rtci-${rawSlug}` : fallbackSlug;
+  const slugValue = rawSlug ? `${source.id}-${rawSlug}` : fallbackSlug;
 
   const rawPubDate = textContent(item.pubDate);
   const pubDate = rawPubDate ? new Date(rawPubDate) : null;
@@ -137,9 +158,9 @@ const parseRtciItem = (item: any): Article | null => {
   const imageUrl = media ? textContent(media.url ?? media["@_url"]) : "";
 
   return {
-    tid: -2,
-    label: category || "RTCI",
-    tslug: labelSlug || `rtci-${id}`,
+    tid: hashString(`${source.id}-${category}`),
+    label: category || source.name,
+    tslug: labelSlug || `${source.id}-${id}`,
     id,
     title,
     slug: slugValue,
@@ -155,33 +176,56 @@ const parseRtciItem = (item: any): Article | null => {
     link,
     link2: link,
     firstItem: false,
-    source: RTCI_SOURCE,
+    source: source.id,
   };
 };
 
-const fetchMosaiqueArticles = async (page: number): Promise<Article[]> => {
-  const apiUrl = `https://api.mosaiquefm.net/api/ar/${MOSAIQUE_PER_PAGE}/${page}/articles`;
+const fetchApiSource = async (
+  source: ApiNewsSource,
+  page: number
+): Promise<Article[]> => {
+  const perPage = source.perPage ?? 24;
+  const replacements: Record<string, string | number | undefined> = {
+    page,
+    perPage,
+    ...source.params,
+  };
+
+  const apiUrl = fillEndpointTemplate(source.endpoint, replacements);
 
   try {
     const response = await fetch(apiUrl, FETCH_OPTIONS);
     if (!response.ok) {
-      throw new Error(`Mosaique API returned ${response.status}`);
+      throw new Error(`${source.name} API returned ${response.status}`);
     }
 
     const data = await response.json();
-    const items = Array.isArray(data?.items) ? (data.items as Article[]) : [];
-    return items.map(mapMosaiqueArticle);
+    const items: Article[] = Array.isArray(data?.items)
+      ? (data.items as Article[])
+      : [];
+
+    let mapped: Article[];
+    switch (source.id) {
+      case "mosaique":
+        mapped = items.map((item) => mapMosaiqueArticle(item, source.id));
+        break;
+      default:
+        mapped = items.map((item) => ({ ...item, source: source.id }));
+        break;
+    }
+
+    return applyMaxAgeFilter(mapped, source);
   } catch (error) {
-    console.error("Error fetching Mosaique articles:", error);
+    console.error(`Error fetching ${source.name} articles:`, error);
     return [];
   }
 };
 
-const fetchRtciArticles = async (): Promise<Article[]> => {
+const fetchRssSource = async (source: RssNewsSource): Promise<Article[]> => {
   try {
-    const response = await fetch(RTCI_FEED_URL, FETCH_OPTIONS);
+    const response = await fetch(source.endpoint, FETCH_OPTIONS);
     if (!response.ok) {
-      throw new Error(`RTCI feed returned ${response.status}`);
+      throw new Error(`${source.name} feed returned ${response.status}`);
     }
 
     const xml = await response.text();
@@ -189,32 +233,66 @@ const fetchRtciArticles = async (): Promise<Article[]> => {
     const items = parsed?.rss?.channel?.item;
     const itemList = Array.isArray(items) ? items : items ? [items] : [];
 
-    return itemList
-      .map(parseRtciItem)
+    const mapped = itemList
+      .map((item) => parseRssItem(item, source))
       .filter((article): article is Article => Boolean(article));
+
+    return applyMaxAgeFilter(mapped, source);
   } catch (error) {
-    console.error("Error fetching RTCI RSS feed:", error);
+    console.error(`Error fetching ${source.name} RSS feed:`, error);
     return [];
   }
 };
 
-export async function fetchPosts(page: number) {
-  const [mosaiqueArticles, rtciArticles] = await Promise.all([
-    fetchMosaiqueArticles(page),
-    page === 1 ? fetchRtciArticles() : Promise.resolve([]),
-  ]);
+const fetchArticlesForSource = async (
+  source: NewsSource,
+  page: number
+): Promise<Article[]> => {
+  if (source.firstPageOnly && page > 1) {
+    return [];
+  }
 
-  const combined =
-    page === 1
-      ? [...rtciArticles, ...mosaiqueArticles].sort(
-          (a, b) => getArticleTimestamp(b) - getArticleTimestamp(a)
-        )
-      : mosaiqueArticles;
+  if (source.type === "api") {
+    return fetchApiSource(source, page);
+  }
 
+  return fetchRssSource(source);
+};
+
+export async function fetchPosts(
+  page: number,
+  options?: FetchPostsOptions
+): Promise<Article[] | null> {
+  const requestedSources = options?.sources?.length
+    ? new Set(options.sources)
+    : null;
+
+  const activeSources = NEWS_SOURCES.filter((source: NewsSource) => {
+    if (requestedSources && !requestedSources.has(source.id)) {
+      return false;
+    }
+
+    if (source.firstPageOnly && page > 1) {
+      return false;
+    }
+
+    return true;
+  });
+
+  if (activeSources.length === 0) {
+    return null;
+  }
+
+  const articleGroups = await Promise.all(
+    activeSources.map((source) => fetchArticlesForSource(source, page))
+  );
+
+  const combined = articleGroups.flat();
   if (combined.length === 0) {
     return null;
   }
 
+  combined.sort((a, b) => getArticleTimestamp(b) - getArticleTimestamp(a));
   return combined;
 }
 
@@ -222,37 +300,40 @@ export async function fetchArticleBySlug(
   slug: string
 ): Promise<ArticleDetailResult> {
   const attemptedUrls: string[] = [];
-  // If slug looks like a numeric id, call the article detail endpoint pattern.
   const isNumeric = /^\d+$/.test(slug);
 
   if (isNumeric) {
-    // Try multiple language endpoints following the API pattern.
-    const langs = ["ar", "fr"];
-    for (const lang of langs) {
-      const detailUrl = `https://api.mosaiquefm.net/api/${lang}/5/1/articles/${encodeURIComponent(
-        slug
-      )}`;
-      attemptedUrls.push(detailUrl);
-      try {
-        console.log("Fetching article detail from", detailUrl);
-        const res = await fetch(detailUrl, FETCH_OPTIONS);
-        if (!res.ok) continue;
-        const data = await res.json();
-        const article: any = data?.item ?? data?.article ?? data?.data ?? data;
-        if (article) {
-          return {
-            article: { ...(article as Article), source: MOSAIQUE_SOURCE },
-            attemptedUrls,
-          };
+    const mosaiqueSource = NEWS_SOURCES.find(
+      (source) => source.id === "mosaique"
+    ) as ApiNewsSource | undefined;
+
+    if (mosaiqueSource) {
+      const langs = ["ar", "fr"];
+      for (const lang of langs) {
+        const detailUrl = `https://api.mosaiquefm.net/api/${lang}/5/1/articles/${encodeURIComponent(
+          slug
+        )}`;
+        attemptedUrls.push(detailUrl);
+        try {
+          console.log("Fetching article detail from", detailUrl);
+          const res = await fetch(detailUrl, FETCH_OPTIONS);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const rawArticle: any =
+            data?.item ?? data?.article ?? data?.data ?? data;
+          if (rawArticle) {
+            return {
+              article: mapMosaiqueArticle(rawArticle as Article, mosaiqueSource.id),
+              attemptedUrls,
+            };
+          }
+        } catch (e) {
+          continue;
         }
-      } catch (e) {
-        // try next language
-        continue;
       }
     }
   }
 
-  // Fallback: search recent posts (paginated) to find a matching slug or id.
   try {
     const decoded = decodeURIComponent(slug);
     const maxPages = 8;
