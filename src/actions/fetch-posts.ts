@@ -8,6 +8,7 @@ import {
 } from "@/config/sources";
 import { Article } from "@/types";
 import { XMLParser } from "fast-xml-parser";
+import { unstable_cache } from "next/cache";
 
 export type ArticleDetailResult = {
   article: Article | null;
@@ -32,6 +33,12 @@ const xmlParser = new XMLParser({
   trimValues: true,
   cdataPropName: "__cdata",
 });
+
+const ALL_SOURCES_KEY = "__all__";
+const POSTS_CACHE_TAG = "fetch-posts";
+const POSTS_CACHE_REVALIDATE_SECONDS = 60;
+const ARTICLE_LOOKUP_BATCH_SIZE = 2;
+const MOSAIQUE_DETAIL_LANGS = ["ar", "fr"] as const;
 
 const textContent = (value: unknown): string => {
   if (typeof value === "string") return value;
@@ -259,14 +266,43 @@ const fetchArticlesForSource = async (
   return fetchRssSource(source);
 };
 
-export async function fetchPosts(
-  page: number,
-  options?: FetchPostsOptions
-): Promise<Article[] | null> {
-  const requestedSources = options?.sources?.length
-    ? new Set(options.sources)
-    : null;
+const normalizeSourcesKey = (sources?: string[]): string => {
+  if (!sources || sources.length === 0) {
+    return ALL_SOURCES_KEY;
+  }
 
+  const uniqueIds = Array.from(
+    new Set(
+      sources
+        .map((id) => id.trim())
+        .filter(Boolean)
+    )
+  );
+
+  if (uniqueIds.length === 0) {
+    return ALL_SOURCES_KEY;
+  }
+
+  return uniqueIds.sort().join(",");
+};
+
+const parseSourcesKey = (sourcesKey: string): Set<string> | null => {
+  if (sourcesKey === ALL_SOURCES_KEY) {
+    return null;
+  }
+
+  return new Set(
+    sourcesKey
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean)
+  );
+};
+
+const loadPosts = async (
+  page: number,
+  requestedSources: Set<string> | null
+): Promise<Article[] | null> => {
   const activeSources = NEWS_SOURCES.filter((source: NewsSource) => {
     if (requestedSources && !requestedSources.has(source.id)) {
       return false;
@@ -294,7 +330,44 @@ export async function fetchPosts(
 
   combined.sort((a, b) => getArticleTimestamp(b) - getArticleTimestamp(a));
   return combined;
+};
+
+const cachedLoadPosts = unstable_cache(
+  async (page: number, sourcesKey: string) => {
+    const requestedSources = parseSourcesKey(sourcesKey);
+    return loadPosts(page, requestedSources);
+  },
+  [POSTS_CACHE_TAG],
+  {
+    revalidate: POSTS_CACHE_REVALIDATE_SECONDS,
+  }
+);
+
+export async function fetchPosts(
+  page: number,
+  options?: FetchPostsOptions
+): Promise<Article[] | null> {
+  const sourcesKey = normalizeSourcesKey(options?.sources);
+  return cachedLoadPosts(page, sourcesKey);
 }
+
+const matchesArticleSlug = (
+  candidate: Article,
+  decodedSlug: string,
+  rawSlug: string
+): boolean => {
+  const candidateId =
+    candidate.id !== undefined && candidate.id !== null
+      ? String(candidate.id)
+      : "";
+
+  return (
+    candidate.slug === decodedSlug ||
+    candidate.tslug === decodedSlug ||
+    candidateId === decodedSlug ||
+    candidateId === rawSlug
+  );
+};
 
 export async function fetchArticleBySlug(
   slug: string
@@ -308,28 +381,35 @@ export async function fetchArticleBySlug(
     ) as ApiNewsSource | undefined;
 
     if (mosaiqueSource) {
-      const langs = ["ar", "fr"];
-      for (const lang of langs) {
-        const detailUrl = `https://api.mosaiquefm.net/api/${lang}/5/1/articles/${encodeURIComponent(
-          slug
-        )}`;
-        attemptedUrls.push(detailUrl);
-        try {
-          console.log("Fetching article detail from", detailUrl);
-          const res = await fetch(detailUrl, FETCH_OPTIONS);
-          if (!res.ok) continue;
-          const data = await res.json();
-          const rawArticle: any =
-            data?.item ?? data?.article ?? data?.data ?? data;
-          if (rawArticle) {
-            return {
-              article: mapMosaiqueArticle(rawArticle as Article, mosaiqueSource.id),
-              attemptedUrls,
-            };
+      const detailResponses = await Promise.all(
+        MOSAIQUE_DETAIL_LANGS.map(async (lang) => {
+          const detailUrl = `https://api.mosaiquefm.net/api/${lang}/5/1/articles/${encodeURIComponent(
+            slug
+          )}`;
+          attemptedUrls.push(detailUrl);
+          try {
+            console.log("Fetching article detail from", detailUrl);
+            const res = await fetch(detailUrl, FETCH_OPTIONS);
+            if (!res.ok) {
+              return null;
+            }
+            const data = await res.json();
+            const rawArticle: any =
+              data?.item ?? data?.article ?? data?.data ?? data;
+            return rawArticle
+              ? mapMosaiqueArticle(rawArticle as Article, mosaiqueSource.id)
+              : null;
+          } catch {
+            return null;
           }
-        } catch (e) {
-          continue;
-        }
+        })
+      );
+
+      const detailArticle = detailResponses.find(
+        (article): article is Article => Boolean(article)
+      );
+      if (detailArticle) {
+        return { article: detailArticle, attemptedUrls };
       }
     }
   }
@@ -337,17 +417,26 @@ export async function fetchArticleBySlug(
   try {
     const decoded = decodeURIComponent(slug);
     const maxPages = 8;
-    for (let p = 1; p <= maxPages; p++) {
-      const posts = await fetchPosts(p);
-      if (!posts || posts.length === 0) continue;
-      const found = posts.find(
-        (it) =>
-          it.slug === decoded ||
-          it.tslug === decoded ||
-          String(it.id) === decoded ||
-          String(it.id) === slug
+    const pageNumbers = Array.from({ length: maxPages }, (_, idx) => idx + 1);
+
+    for (let index = 0; index < pageNumbers.length; index += ARTICLE_LOOKUP_BATCH_SIZE) {
+      const batch = pageNumbers.slice(index, index + ARTICLE_LOOKUP_BATCH_SIZE);
+      const batchResults = await Promise.all(
+        batch.map(async (pageNumber) => fetchPosts(pageNumber))
       );
-      if (found) return { article: found, attemptedUrls };
+
+      for (const posts of batchResults) {
+        if (!posts || posts.length === 0) {
+          continue;
+        }
+
+        const found = posts.find((candidate) =>
+          matchesArticleSlug(candidate, decoded, slug)
+        );
+        if (found) {
+          return { article: found, attemptedUrls };
+        }
+      }
     }
 
     console.log("Article not found for slug:", slug);
