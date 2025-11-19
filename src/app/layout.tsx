@@ -1,8 +1,8 @@
+import { SITE_URL } from "@/config/site";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import GoogleAnalytics from "./GoogleAnalytics";
-import { SITE_URL } from "@/config/site";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -57,7 +57,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
         <link rel="dns-prefetch" href="https://content.mosaiquefm.net" />
         <link rel="dns-prefetch" href="https://cdn.mosaiquefm.net" />

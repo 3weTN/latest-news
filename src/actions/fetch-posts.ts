@@ -1,8 +1,8 @@
 "use server";
 
 import {
-  NEWS_SOURCES,
   ApiNewsSource,
+  NEWS_SOURCES,
   NewsSource,
   RssNewsSource,
 } from "@/config/sources";
@@ -123,7 +123,85 @@ const mapMosaiqueArticle = (article: Article, sourceId: string): Article => ({
   link2: article.link2 ?? article.link ?? "",
 });
 
-const parseRssItem = (item: any, source: RssNewsSource): Article | null => {
+const fetchOgImage = async (url: string): Promise<string | null> => {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+      },
+      next: { revalidate: 3600 }, // Cache OG lookups for 1 hour
+    });
+    if (!response.ok) return null;
+    const html = await response.text();
+    
+    // Try og:image
+    const ogMatch = html.match(/<meta property="og:image" content="([^"]+)"/i);
+    if (ogMatch) return ogMatch[1];
+
+    // Try twitter:image
+    const twitterMatch = html.match(/<meta name="twitter:image" content="([^"]+)"/i);
+    if (twitterMatch) return twitterMatch[1];
+
+    // Try featuredImage in JSON (specific to La Presse/WordPress)
+    const jsonMatch = html.match(/"featuredImage":"([^"]+)"/);
+    if (jsonMatch) return jsonMatch[1].replace(/\\/g, "");
+
+    return null;
+  } catch (e) {
+    console.error(`Error fetching OG image for ${url}:`, e);
+    return null;
+  }
+};
+
+const stripHtml = (html: string): string => {
+  if (!html) return "";
+  
+  let text = html;
+
+  // Decode common HTML entities
+  const entities: Record<string, string> = {
+    "&nbsp;": " ",
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&#39;": "'",
+    "&#8217;": "'",
+    "&#8211;": "-",
+    "&#8212;": "—",
+    "&#8230;": "...",
+    "&#233;": "é",
+    "&#232;": "è",
+    "&#224;": "à",
+    "&#226;": "â",
+    "&#234;": "ê",
+    "&#238;": "î",
+    "&#244;": "ô",
+    "&#251;": "û",
+    "&#231;": "ç",
+    "&#171;": "«",
+    "&#187;": "»",
+  };
+
+  // Basic entity decoding
+  text = text.replace(/&[a-zA-Z0-9#]+;/g, (entity) => {
+    if (entities[entity]) return entities[entity];
+    // Handle numeric entities
+    if (entity.startsWith("&#")) {
+      const code = parseInt(entity.slice(2, -1), 10);
+      if (!isNaN(code)) return String.fromCharCode(code);
+    }
+    return entity;
+  });
+
+  // Remove HTML tags
+  text = text.replace(/<[^>]*>/g, "");
+
+  return text.trim();
+};
+
+const parseRssItem = async (item: any, source: RssNewsSource): Promise<Article | null> => {
   if (!item) return null;
 
   const rawLink = textContent(item.link || (item.guid && item.guid["#text"]) || item.guid);
@@ -136,8 +214,11 @@ const parseRssItem = (item: any, source: RssNewsSource): Article | null => {
 
   const rawDescription =
     textContent(item.description) || textContent(item["content:encoded"]);
+  
+  const cleanDescription = stripHtml(rawDescription);
+  
   const intro =
-    rawDescription.length > 280 ? `${rawDescription.slice(0, 277)}...` : rawDescription;
+    cleanDescription.length > 280 ? `${cleanDescription.slice(0, 277)}...` : cleanDescription;
 
   const categoryValue = Array.isArray(item.category)
     ? textContent(item.category[0])
@@ -162,7 +243,22 @@ const parseRssItem = (item: any, source: RssNewsSource): Article | null => {
 
   const mediaCandidate = item["media:content"] ?? item.content ?? item.enclosure;
   const media = Array.isArray(mediaCandidate) ? mediaCandidate[0] : mediaCandidate;
-  const imageUrl = media ? textContent(media.url ?? media["@_url"]) : "";
+  let imageUrl = media ? textContent(media.url ?? media["@_url"]) : "";
+
+  if (!imageUrl) {
+    const htmlContent = textContent(item["content:encoded"]) || textContent(item.description);
+    const imgMatch = htmlContent.match(/<img[^>]+src="([^">]+)"/);
+    if (imgMatch) {
+      imageUrl = imgMatch[1];
+    }
+  }
+
+  // Fallback: Fetch OG image if still no image
+  if (!imageUrl && link) {
+     // Only try fallback for specific sources or if enabled, to avoid too many requests?
+     // For now, try for all.
+     imageUrl = (await fetchOgImage(link)) || "";
+  }
 
   return {
     tid: hashString(`${source.id}-${category}`),
@@ -240,9 +336,10 @@ const fetchRssSource = async (source: RssNewsSource): Promise<Article[]> => {
     const items = parsed?.rss?.channel?.item;
     const itemList = Array.isArray(items) ? items : items ? [items] : [];
 
-    const mapped = itemList
-      .map((item) => parseRssItem(item, source))
-      .filter((article): article is Article => Boolean(article));
+    const mappedPromises = itemList.map((item) => parseRssItem(item, source));
+    const mapped = (await Promise.all(mappedPromises)).filter(
+      (article): article is Article => Boolean(article)
+    );
 
     return applyMaxAgeFilter(mapped, source);
   } catch (error) {

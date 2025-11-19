@@ -2,11 +2,11 @@
 
 import { fetchPosts } from "@/actions/fetch-posts";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardTitle,
 } from "@/components/ui/card";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import { Spinner } from "@/components/ui/spinner";
@@ -182,14 +182,14 @@ export default function PostsClient({ initialPosts }: Props) {
         )}
 
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4">
-          {gridPosts.map((article) => {
+          {gridPosts.map((article, index) => {
             const publishDate = getArticlePublishDate(article);
             const sourceInfo = NEWS_SOURCES.find(
               (source: NewsSource) => source.id === article.source
             );
             return (
               <Card
-                key={article.id}
+                key={`${article.id}-${index}`}
                 className="overflow-hidden transform transition will-change-transform hover:-translate-y-1 hover:shadow-lg shadow-sm"
               >
                 <Link

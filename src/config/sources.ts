@@ -41,4 +41,28 @@ export const NEWS_SOURCES: NewsSource[] = [
     maxAgeDays: 30,
     enabledByDefault: true,
   },
+  {
+    id: "tunisienumerique",
+    name: "Tunisie Numérique",
+    type: "rss",
+    endpoint: "https://www.tunisienumerique.com/feed-actualites-tunisie.xml",
+    maxAgeDays: 2,
+    enabledByDefault: true,
+  },
+  {
+    id: "kapitalis",
+    name: "Kapitalis",
+    type: "rss",
+    endpoint: "https://kapitalis.com/tunisie/feed/",
+    maxAgeDays: 2,
+    enabledByDefault: true,
+  },
+  {
+    id: "lapresse",
+    name: "La Presse",
+    type: "rss",
+    endpoint: "https://lapresse.tn/feed/",
+    maxAgeDays: 2,
+    enabledByDefault: true,
+  },
 ];
