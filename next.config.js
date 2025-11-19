@@ -25,6 +25,22 @@ const nextConfig = {
         protocol: "https",
         hostname: "content.mosaiquefm.net",
       },
+      {
+        protocol: "https",
+        hostname: "www.tunisienumerique.com",
+      },
+      {
+        protocol: "https",
+        hostname: "kapitalis.com",
+      },
+      {
+        protocol: "https",
+        hostname: "lapresse.tn",
+      },
+      {
+        protocol: "https",
+        hostname: "www.rtci.tn",
+      },
     ],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
     formats: ["image/avif", "image/webp"],
