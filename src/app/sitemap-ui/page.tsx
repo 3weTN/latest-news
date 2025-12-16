@@ -21,7 +21,7 @@ export default async function SitemapPageUI() {
 
       <p className="mb-6 text-sm text-muted-foreground">
         This page lists recent articles. For the machine-readable sitemap visit{" "}
-        <Link href="/sitemap.xml" className="text-indigo-600">
+        <Link href="/sitemap.xml" className="text-primary hover:text-primary/80">
           /sitemap.xml
         </Link>
         .
@@ -50,12 +50,15 @@ export default async function SitemapPageUI() {
               className="flex flex-col sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
-                <Link href={href} className="text-indigo-600 underline">
+                <Link
+                  href={href}
+                  className="text-primary underline hover:text-primary/80"
+                >
                   {a.title}
                 </Link>
                 <div className="text-xs text-muted-foreground">{a.intro}</div>
               </div>
-              <div className="text-xs text-gray-500 mt-2 sm:mt-0">
+              <div className="text-xs text-muted-foreground mt-2 sm:mt-0">
                 {lastMod}
               </div>
             </li>

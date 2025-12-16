@@ -24,7 +24,7 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
   };
 
   if (!posts || posts.length === 0) {
-    return <div className="text-xl font-bold">No posts available</div>;
+    return <div className="text-xl font-bold text-muted-foreground">No posts available</div>;
   }
 
   let featured: Article | null = null;
@@ -46,7 +46,7 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
               className="block rounded-lg overflow-hidden shadow-lg group"
               aria-label={`Read ${featured.title}`}
             >
-              <div className="relative w-full h-64 md:h-96 bg-gray-100">
+              <div className="relative w-full h-64 md:h-96 bg-muted">
                 {featured.image ? (
                   <OptimizedImage
                     src={featured.image}
@@ -58,8 +58,8 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                    <span className="text-sm text-gray-400">No image</span>
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/70">
+                    <span className="text-sm text-muted-foreground">No image</span>
                   </div>
                 )}
 
@@ -88,15 +88,15 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
             return (
               <Card
                 key={article.id}
-                className="overflow-hidden transform transition will-change-transform hover:-translate-y-1 hover:shadow-lg shadow-sm"
+                className="overflow-hidden transform transition duration-200 will-change-transform hover:-translate-y-1 hover:shadow-xl shadow-sm border-border/70"
               >
                 <Link
                   href={hrefFor(article)}
-                  className="group block focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   aria-label={`Read ${article.title}`}
                 >
                   <CardContent className="p-0">
-                    <div className="relative w-full h-44 bg-gray-100 overflow-hidden">
+                    <div className="relative w-full h-44 bg-muted overflow-hidden">
                       {article.image ? (
                         <OptimizedImage
                           src={article.image}
@@ -106,8 +106,8 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                          <span className="text-sm text-gray-400">No image</span>
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/70">
+                          <span className="text-sm text-muted-foreground">No image</span>
                         </div>
                       )}
                     </div>
@@ -121,7 +121,7 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
                     </div>
                   )}
 
-                  <CardFooter className="flex flex-col items-start p-4 gap-2 text-right">
+                  <CardFooter className="flex w-full flex-col items-start p-4 gap-2 text-right">
                     <CardTitle className="text-base sm:text-lg leading-tight line-clamp-2">
                       {article.title}
                     </CardTitle>
@@ -133,19 +133,19 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
                     </CardDescription>
 
                     <div className="mt-2 w-full flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {article.label && (
-                        <span className="px-2 py-0.5 bg-muted rounded-full">
-                          {article.label}
-                        </span>
-                      )}
-                      {sourceInfo && (
-                        <span className="px-2 py-0.5 border rounded-full text-[0.65rem] uppercase tracking-wide">
-                          {sourceInfo.name}
-                        </span>
-                      )}
-                    </div>
-                      <div className="text-indigo-600 font-medium">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {article.label && (
+                          <span className="px-2 py-0.5 bg-muted rounded-full">
+                            {article.label}
+                          </span>
+                        )}
+                        {sourceInfo && (
+                          <span className="px-2 py-0.5 border rounded-full text-[0.65rem] uppercase tracking-wide">
+                            {sourceInfo.name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-primary font-semibold transition-transform duration-200 group-hover:translate-x-0.5">
                         {"Read \u2192"}
                       </div>
                     </div>

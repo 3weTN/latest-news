@@ -2,18 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222.2 47.4% 11.2%;
+    --muted: 214 32% 91%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 0 68% 96%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --primary: 350 74% 48%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 350 74% 48%;
+    --radius: 0.75rem;
+  }
 
-.dark {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 0, 0, 0;
-  --background-end-rgb: 0, 0, 0;
-}
+  .dark {
+    --background: 222.2 50% 7%;
+    --foreground: 210 40% 98%;
+    --muted: 217 25% 16%;
+    --muted-foreground: 215 20% 70%;
+    --accent: 350 39% 18%;
+    --accent-foreground: 210 40% 98%;
+    --popover: 224 36% 10%;
+    --popover-foreground: 210 40% 98%;
+    --card: 224 36% 10%;
+    --card-foreground: 210 40% 98%;
+    --border: 216 34% 27%;
+    --input: 216 34% 27%;
+    --primary: 350 74% 52%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217 24% 18%;
+    --secondary-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 52.2%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 350 74% 52%;
+  }
 
-body {
-  color: rgb(var(--foreground-rgb));
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-image: radial-gradient(
+        circle at 20% 20%,
+        hsl(var(--accent) / 0.25),
+        transparent 35%
+      ),
+      radial-gradient(
+        circle at 80% 0%,
+        hsl(var(--primary) / 0.18),
+        transparent 25%
+      );
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
 }

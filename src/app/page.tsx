@@ -5,12 +5,19 @@ const PostsPage = async () => {
   const posts = await fetchPosts(1);
 
   return (
-    <div className="container mx-auto px-4 py-8 min-h-screen ">
-      <h1 className="text-3xl font-bold mb-4 text-center">عناوين الأخبار</h1>
+    <main className="container mx-auto px-4 py-10 min-h-screen">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6 text-right">
+        <div className="space-y-1">
+          <p className="text-sm text-muted-foreground">
+            تغطية فورية لأبرز العناوين التونسية على مدار اليوم.
+          </p>
+          <h1 className="text-3xl font-bold leading-tight">أحدث الأخبار التونسية</h1>
+        </div>
+      </div>
 
       {/* Client component that renders initial posts and handles infinite loading in one grid */}
       <PostsClient initialPosts={posts} />
-    </div>
+    </main>
   );
 };
 

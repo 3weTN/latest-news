@@ -130,10 +130,12 @@ export default async function Page({ params }: Props) {
   if (!article) {
     return (
       <div className="container mx-auto px-4 py-12">
-        <p className="text-center text-lg">Article not found.</p>
+        <p className="text-center text-lg font-semibold text-muted-foreground">
+          Article not found.
+        </p>
 
         {attemptedUrls && attemptedUrls.length > 0 && (
-          <div className="mt-4 text-center text-sm text-gray-500">
+          <div className="mt-4 text-center text-sm text-muted-foreground">
             <div>Attempted detail URLs:</div>
 
             <pre className="whitespace-pre-wrap">
@@ -270,14 +272,14 @@ export default async function Page({ params }: Props) {
           <div className="mb-6 text-left">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 rounded-full border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100"
+              className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
             >
-              ← Back to home
+              {"\u2190 Back to home"}
             </Link>
           </div>
 
           {showDebug && (
-            <div className="mb-4 text-sm text-gray-500 text-left">
+            <div className="mb-4 text-sm text-muted-foreground text-left">
               <strong>Debug - attempted detail URLs:</strong>
 
               <pre className="whitespace-pre-wrap">
@@ -300,7 +302,7 @@ export default async function Page({ params }: Props) {
                 href={sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-indigo-600"
+                className="text-primary"
               >
                 Read original source
               </a>

@@ -99,6 +99,13 @@ export default function PostsClient({ initialPosts }: Props) {
     }
   };
 
+  const filterButtonBase =
+    "rounded-full border px-4 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  const activeFilterClasses =
+    "bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary/90";
+  const inactiveFilterClasses =
+    "border-border bg-muted text-muted-foreground hover:bg-muted/80";
+
   const filterButtons = (
     <div className="flex flex-wrap justify-center gap-2 mb-6">
       <button
@@ -106,10 +113,8 @@ export default function PostsClient({ initialPosts }: Props) {
         disabled={isFiltering || loading}
         onClick={() => handleFilterChange("all")}
         className={cn(
-          "rounded-full border px-4 py-2 text-sm transition-colors bg-red-600",
-          selectedSource === "all"
-            ? "bg-gray-200 text-black border-gray-300 hover:bg-gray-300"
-            : "border-border bg-transparent text-muted-foreground hover:bg-muted"
+          filterButtonBase,
+          selectedSource === "all" ? activeFilterClasses : inactiveFilterClasses
         )}
       >
         All Sources
@@ -121,10 +126,10 @@ export default function PostsClient({ initialPosts }: Props) {
           disabled={isFiltering || loading}
           onClick={() => handleFilterChange(source.id)}
           className={cn(
-            "rounded-full border px-4 py-2 text-sm transition-colors",
+            filterButtonBase,
             selectedSource === source.id
-              ? "bg-gray-200 text-black border-gray-300 hover:bg-gray-300"
-              : "border-border bg-transparent text-muted-foreground hover:bg-muted"
+              ? activeFilterClasses
+              : inactiveFilterClasses
           )}
         >
           {source.name}
@@ -138,7 +143,7 @@ export default function PostsClient({ initialPosts }: Props) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {filterButtons}
         {(!posts || posts.length === 0) && (
-          <div className="text-xl font-bold text-center py-8">
+          <div className="text-xl font-bold text-center py-8 text-muted-foreground">
             No posts available
           </div>
         )}
@@ -149,7 +154,7 @@ export default function PostsClient({ initialPosts }: Props) {
               className="block rounded-lg overflow-hidden shadow-lg group"
               aria-label={`Read ${featured.title}`}
             >
-              <div className="relative w-full h-64 md:h-96 bg-gray-100">
+              <div className="relative w-full h-64 md:h-96 bg-muted">
                 {featured.image ? (
                   <OptimizedImage
                     src={featured.image}
@@ -161,8 +166,10 @@ export default function PostsClient({ initialPosts }: Props) {
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                    <span className="text-sm text-gray-400">No image</span>
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/70">
+                    <span className="text-sm text-muted-foreground">
+                      No image
+                    </span>
                   </div>
                 )}
 
@@ -190,15 +197,15 @@ export default function PostsClient({ initialPosts }: Props) {
             return (
               <Card
                 key={`${article.id}-${index}`}
-                className="overflow-hidden transform transition will-change-transform hover:-translate-y-1 hover:shadow-lg shadow-sm"
+                className="overflow-hidden transform transition duration-200 will-change-transform hover:-translate-y-1 hover:shadow-xl shadow-sm border-border/70"
               >
                 <Link
                   href={hrefFor(article)}
-                  className="group block focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   aria-label={`Read ${article.title}`}
                 >
                   <CardContent className="p-0">
-                    <div className="relative w-full h-44 bg-gray-100 overflow-hidden">
+                    <div className="relative w-full h-44 bg-muted overflow-hidden">
                       {article.image ? (
                         <OptimizedImage
                           src={article.image}
@@ -208,8 +215,8 @@ export default function PostsClient({ initialPosts }: Props) {
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                          <span className="text-sm text-gray-400">
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/70">
+                          <span className="text-sm text-muted-foreground">
                             No image
                           </span>
                         </div>
@@ -228,7 +235,7 @@ export default function PostsClient({ initialPosts }: Props) {
                     </div>
                   )}
 
-                  <CardFooter className="flex flex-col items-start p-4 gap-2 text-right">
+                  <CardFooter className="flex w-full flex-col items-start p-4 gap-2 text-right">
                     <CardTitle className="text-base sm:text-lg leading-tight line-clamp-2">
                       {article.title}
                     </CardTitle>
@@ -252,7 +259,7 @@ export default function PostsClient({ initialPosts }: Props) {
                           </span>
                         )}
                       </div>
-                      <div className="text-indigo-600 font-medium">
+                      <div className="text-primary font-semibold transition-transform duration-200 group-hover:translate-x-0.5">
                         {"Read \u2192"}
                       </div>
                     </div>
