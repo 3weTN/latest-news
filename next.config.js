@@ -26,6 +26,26 @@ const nextConfig = {
         hostname: "content.mosaiquefm.net",
       },
       {
+        protocol: "http",
+        hostname: "content.mosaiquefm.net",
+      },
+      {
+        protocol: "http",
+        hostname: "api.mosaiquefm.net",
+      },
+      {
+        protocol: "http",
+        hostname: "cdn.mosaiquefm.net",
+      },
+      {
+        protocol: "http",
+        hostname: "www.mosaiquefm.net",
+      },
+      {
+        protocol: "http",
+        hostname: "mosaiquefm.net",
+      },
+      {
         protocol: "https",
         hostname: "www.tunisienumerique.com",
       },

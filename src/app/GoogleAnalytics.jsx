@@ -4,9 +4,6 @@ import Script from "next/script";
 import * as gtag from "../../gtag.js";
 
 const GoogleAnalytics = () => {
-  //You can show in the console the GA_TRACKING_ID to confirm
-  //console.log(gtag.GA_TRACKING_ID);
-
   return (
     <>
       <Script
@@ -21,7 +18,7 @@ const GoogleAnalytics = () => {
                       window.dataLayer = window.dataLayer || [];
                       function gtag(){dataLayer.push(arguments);}
                       gtag('js', new Date());
-                      gtag('config', 'G-YEWYHJMZPE', {
+                      gtag('config', '${gtag.GA_TRACKING_ID}', {
                       page_path: window.location.pathname,
                       });
                     `,

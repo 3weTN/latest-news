@@ -15,8 +15,9 @@ import { getArticlePublishDate } from "@/lib/article-date";
 import { cn } from "@/lib/utils";
 import { Article } from "@/types";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useInView } from "react-intersection-observer";
+import { useViewMode } from "@/components/view-mode-provider";
 
 interface Props {
   initialPosts: Article[] | null;
@@ -28,18 +29,14 @@ export default function PostsClient({ initialPosts }: Props) {
   const [loading, setLoading] = useState(false);
   const [hasLoadedMore, setHasLoadedMore] = useState(false);
   const [isFiltering, setIsFiltering] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedSource, setSelectedSource] = useState<string>("all");
+  const { viewMode } = useViewMode();
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const { ref, inView } = useInView();
 
-  useEffect(() => {
-    if (inView && !loading && !isFiltering) {
-      loadMore();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inView, loading, isFiltering, selectedSource]);
-
-  const loadMore = async () => {
+  const loadMore = useCallback(async () => {
     const activeSourceIds =
       selectedSource === "all"
         ? NEWS_SOURCES.map((source: NewsSource) => source.id)
@@ -66,51 +63,101 @@ export default function PostsClient({ initialPosts }: Props) {
       setPosts((p) => [...p, ...newPosts]);
       setPage(nextPage);
       setHasLoadedMore(true);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // Error loading more posts - silently fail
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, selectedSource]);
 
-  const hrefFor = (article: Article) => {
+  useEffect(() => {
+    if (inView && !loading && !isFiltering && !isRefreshing) {
+      loadMore();
+    }
+  }, [inView, loading, isFiltering, isRefreshing, loadMore]);
+
+  const fetchFirstPage = useCallback(async (sourceId: string) => {
+    const sourcesFilter = sourceId === "all" ? undefined : [sourceId];
+    return (await fetchPosts(1, { sources: sourcesFilter })) ?? [];
+  }, []);
+
+  const refreshCurrentSource = useCallback(async () => {
+    if (loading || isFiltering || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      const freshPosts = await fetchFirstPage(selectedSource);
+      setPosts(freshPosts);
+      setPage(1);
+      setHasLoadedMore(false);
+    } catch {
+      // Error refreshing posts - silently fail
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [loading, isFiltering, isRefreshing, selectedSource, fetchFirstPage]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      refreshCurrentSource();
+    }, 60_000);
+
+    return () => clearInterval(timer);
+  }, [refreshCurrentSource]);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  const hrefFor = useCallback((article: Article) => {
     const slugOrId = article.slug ?? String(article.id);
     return `/article/${encodeURIComponent(slugOrId)}`;
-  };
+  }, []);
 
-  const featured = !hasLoadedMore && posts.length > 0 ? posts[0] : null;
-  const gridPosts = !hasLoadedMore ? posts.slice(1) : posts;
-
-  const handleFilterChange = async (sourceId: string) => {
+  const handleFilterChange = useCallback(async (sourceId: string) => {
     if (sourceId === selectedSource) return;
     setIsFiltering(true);
     try {
-      const sourcesFilter = sourceId === "all" ? undefined : [sourceId];
-      const freshPosts =
-        (await fetchPosts(1, { sources: sourcesFilter })) ?? [];
+      const freshPosts = await fetchFirstPage(sourceId);
       setPosts(freshPosts);
       setPage(1);
       setHasLoadedMore(false);
       setSelectedSource(sourceId);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // Error filtering posts - silently fail
     } finally {
       setIsFiltering(false);
     }
-  };
+  }, [selectedSource, fetchFirstPage]);
 
-  const filterButtonBase =
-    "rounded-full border px-4 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
-  const activeFilterClasses =
-    "bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary/90";
-  const inactiveFilterClasses =
-    "border-border bg-muted text-muted-foreground hover:bg-muted/80";
+  const effectiveViewMode = isHydrated ? viewMode : "grid";
+  const isListView = effectiveViewMode === "list";
+  const featured = useMemo(
+    () => (!hasLoadedMore && posts.length > 0 && !isListView ? posts[0] : null),
+    [hasLoadedMore, posts, isListView]
+  );
+  const gridPosts = useMemo(
+    () => (isListView || hasLoadedMore ? posts : posts.slice(1)),
+    [isListView, hasLoadedMore, posts]
+  );
 
-  const filterButtons = (
-    <div className="flex flex-wrap justify-center gap-2 mb-6">
+  const filterButtonClasses = useMemo(() => ({
+    base: "rounded-full border px-4 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    active: "bg-primary text-primary-foreground border-primary shadow-sm hover:bg-primary/90",
+    inactive: "border-border bg-muted text-muted-foreground hover:bg-muted/80"
+  }), []);
+
+  const filterButtonBase = filterButtonClasses.base;
+  const activeFilterClasses = filterButtonClasses.active;
+  const inactiveFilterClasses = filterButtonClasses.inactive;
+
+  const filterButtons = useMemo(() => (
+    <div role="region" aria-label="Filter articles by source" className="flex flex-wrap justify-center gap-2 mb-4">
       <button
         type="button"
-        disabled={isFiltering || loading}
+        role="button"
+        aria-pressed={selectedSource === "all"}
+        aria-label="Show all sources"
+        disabled={isFiltering || loading || isRefreshing}
         onClick={() => handleFilterChange("all")}
         className={cn(
           filterButtonBase,
@@ -123,7 +170,10 @@ export default function PostsClient({ initialPosts }: Props) {
         <button
           key={source.id}
           type="button"
-          disabled={isFiltering || loading}
+          role="button"
+          aria-pressed={selectedSource === source.id}
+          aria-label={`Filter by ${source.name}`}
+          disabled={isFiltering || loading || isRefreshing}
           onClick={() => handleFilterChange(source.id)}
           className={cn(
             filterButtonBase,
@@ -136,14 +186,19 @@ export default function PostsClient({ initialPosts }: Props) {
         </button>
       ))}
     </div>
-  );
+  ), [selectedSource, isFiltering, loading, isRefreshing, handleFilterChange, filterButtonBase, activeFilterClasses, inactiveFilterClasses]);
 
   return (
-    <section className="w-full">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="w-full" aria-label="News articles">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {filterButtons}
+        <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+          {isFiltering && "Filtering articles..."}
+          {isRefreshing && "Refreshing articles..."}
+          {loading && "Loading more articles..."}
+        </div>
         {(!posts || posts.length === 0) && (
-          <div className="text-xl font-bold text-center py-8 text-muted-foreground">
+          <div role="alert" className="text-xl font-bold text-center py-8 text-muted-foreground">
             No posts available
           </div>
         )}
@@ -188,12 +243,58 @@ export default function PostsClient({ initialPosts }: Props) {
           </article>
         )}
 
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4">
+        <div
+          className={cn(
+            isListView
+              ? "grid grid-cols-1 gap-4"
+              : "grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4"
+          )}
+        >
           {gridPosts.map((article, index) => {
             const publishDate = getArticlePublishDate(article);
             const sourceInfo = NEWS_SOURCES.find(
               (source: NewsSource) => source.id === article.source
             );
+
+            if (isListView) {
+              return (
+                <article
+                  key={`${article.id}-${index}`}
+                  className="border-b border-border pb-3 last:border-b-0"
+                >
+                  <Link
+                    href={hrefFor(article)}
+                    className="group block hover:bg-muted/30 p-3 rounded-lg transition-colors"
+                    aria-label={`Read ${article.title}`}
+                  >
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1.5">
+                      {publishDate && (
+                        <time dateTime={publishDate.iso}>
+                          {publishDate.display}
+                        </time>
+                      )}
+                      {sourceInfo && (
+                        <>
+                          <span>•</span>
+                          <span className="uppercase font-medium text-primary">
+                            {sourceInfo.name}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <h3 className="font-bold text-base leading-snug line-clamp-2 mb-1.5 group-hover:text-primary transition-colors">
+                      {article.title}
+                    </h3>
+
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {article.intro}
+                    </p>
+                  </Link>
+                </article>
+              );
+            }
+
             return (
               <Card
                 key={`${article.id}-${index}`}
@@ -271,7 +372,7 @@ export default function PostsClient({ initialPosts }: Props) {
         </div>
 
         <div ref={ref} className="flex justify-center items-center p-4">
-          {loading || isFiltering ? <Spinner /> : null}
+          {loading || isFiltering || isRefreshing ? <Spinner /> : null}
         </div>
       </div>
     </section>

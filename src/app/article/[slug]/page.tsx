@@ -1,14 +1,10 @@
 import { fetchArticleBySlug } from "@/actions/fetch-posts";
-
 import { OptimizedImage } from "@/components/ui/optimized-image";
-
 import { getArticlePublishDate } from "@/lib/article-date";
-
 import { SITE_URL } from "@/config/site";
-
 import Link from "next/link";
-
 import { Metadata, ResolvingMetadata } from "next";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 type Props = {
   params: { slug: string } | Promise<{ slug: string }>;
@@ -150,15 +146,14 @@ export default async function Page({ params }: Props) {
   // Render article details. The API may return a full HTML body under several field names.
 
   const bodyHtml =
-    (article as any).content ||
-    (article as any).body ||
-    (article as any).article ||
+    article.content ||
+    article.body ||
+    article.article ||
     null;
 
   const plainText =
     article.intro ||
-    (article as any).summary ||
-    (article as any).description ||
+    article.summary ||
     "";
 
   const mosaiqueBaseUrl = "https://www.mosaiquefm.net";
@@ -289,9 +284,11 @@ export default async function Page({ params }: Props) {
           )}
 
           {bodyHtml ? (
-            // If the API provided HTML, render it. We assume the API is trusted. If not, sanitize it first.
-
-            <div dangerouslySetInnerHTML={{ __html: String(bodyHtml) }} />
+            <div
+              dangerouslySetInnerHTML={{
+                __html: sanitizeHtml(String(bodyHtml)),
+              }}
+            />
           ) : (
             <p>{plainText}</p>
           )}

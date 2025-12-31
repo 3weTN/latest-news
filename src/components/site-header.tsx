@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ViewModeToggle } from "@/components/view-mode-toggle";
 
 export function SiteHeader() {
   return (
@@ -18,7 +19,10 @@ export function SiteHeader() {
             Tunisian News
           </Link>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <ViewModeToggle />
+        </div>
       </div>
     </header>
   );

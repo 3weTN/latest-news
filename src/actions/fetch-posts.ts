@@ -6,7 +6,7 @@ import {
   NewsSource,
   RssNewsSource,
 } from "@/config/sources";
-import { Article } from "@/types";
+import { Article, RssItem } from "@/types";
 import { XMLParser } from "fast-xml-parser";
 import { unstable_cache } from "next/cache";
 
@@ -45,7 +45,8 @@ const textContent = (value: unknown): string => {
   if (value && typeof value === "object") {
     const asRecord = value as Record<string, unknown>;
     if (typeof asRecord.__cdata === "string") return asRecord.__cdata;
-    if (typeof asRecord["#text"] === "string") return asRecord["#text"] as string;
+    if (typeof asRecord["#text"] === "string")
+      return asRecord["#text"] as string;
   }
   return value == null ? "" : String(value);
 };
@@ -93,7 +94,9 @@ const getArticleTimestamp = (article: Article): number => {
     }
 
     if (typeof candidate === "number") {
-      const date = new Date(candidate < 10_000_000_000 ? candidate * 1000 : candidate);
+      const date = new Date(
+        candidate < 10_000_000_000 ? candidate * 1000 : candidate
+      );
       if (!Number.isNaN(date.getTime())) return date.getTime();
       continue;
     }
@@ -111,15 +114,35 @@ const getArticleTimestamp = (article: Article): number => {
   return 0;
 };
 
-const applyMaxAgeFilter = (articles: Article[], source: NewsSource): Article[] => {
+const applyMaxAgeFilter = (
+  articles: Article[],
+  source: NewsSource
+): Article[] => {
   if (!source.maxAgeDays) return articles;
   const cutoff = Date.now() - source.maxAgeDays * 24 * 60 * 60 * 1000;
   return articles.filter((article) => getArticleTimestamp(article) >= cutoff);
 };
 
+const normalizeMosaiqueImage = (imageUrl?: string): string => {
+  if (!imageUrl) return "";
+  let url = imageUrl.trim();
+
+  if (!url) return "";
+  if (url.startsWith("//")) {
+    url = `https:${url}`;
+  } else if (url.startsWith("/")) {
+    url = `https://www.mosaiquefm.net${url}`;
+  } else if (url.startsWith("http://")) {
+    url = url.replace(/^http:\/\//, "https://");
+  }
+
+  return url;
+};
+
 const mapMosaiqueArticle = (article: Article, sourceId: string): Article => ({
   ...article,
   source: sourceId,
+  image: normalizeMosaiqueImage(article.image as string | undefined),
   link2: article.link2 ?? article.link ?? "",
 });
 
@@ -134,13 +157,15 @@ const fetchOgImage = async (url: string): Promise<string | null> => {
     });
     if (!response.ok) return null;
     const html = await response.text();
-    
+
     // Try og:image
     const ogMatch = html.match(/<meta property="og:image" content="([^"]+)"/i);
     if (ogMatch) return ogMatch[1];
 
     // Try twitter:image
-    const twitterMatch = html.match(/<meta name="twitter:image" content="([^"]+)"/i);
+    const twitterMatch = html.match(
+      /<meta name="twitter:image" content="([^"]+)"/i
+    );
     if (twitterMatch) return twitterMatch[1];
 
     // Try featuredImage in JSON (specific to La Presse/WordPress)
@@ -148,15 +173,14 @@ const fetchOgImage = async (url: string): Promise<string | null> => {
     if (jsonMatch) return jsonMatch[1].replace(/\\/g, "");
 
     return null;
-  } catch (e) {
-    console.error(`Error fetching OG image for ${url}:`, e);
+  } catch {
     return null;
   }
 };
 
 const stripHtml = (html: string): string => {
   if (!html) return "";
-  
+
   let text = html;
 
   // Decode common HTML entities
@@ -201,10 +225,16 @@ const stripHtml = (html: string): string => {
   return text.trim();
 };
 
-const parseRssItem = async (item: any, source: RssNewsSource): Promise<Article | null> => {
+const parseRssItem = async (
+  item: RssItem,
+  source: RssNewsSource
+): Promise<Article | null> => {
   if (!item) return null;
 
-  const rawLink = textContent(item.link || (item.guid && item.guid["#text"]) || item.guid);
+  const guidText = typeof item.guid === 'object' && item.guid !== null ? item.guid["#text"] : undefined;
+  const rawLink = textContent(
+    item.link || guidText || item.guid
+  );
   const link = rawLink.trim();
   const title = textContent(item.title).trim();
 
@@ -214,11 +244,13 @@ const parseRssItem = async (item: any, source: RssNewsSource): Promise<Article |
 
   const rawDescription =
     textContent(item.description) || textContent(item["content:encoded"]);
-  
+
   const cleanDescription = stripHtml(rawDescription);
-  
+
   const intro =
-    cleanDescription.length > 280 ? `${cleanDescription.slice(0, 277)}...` : cleanDescription;
+    cleanDescription.length > 280
+      ? `${cleanDescription.slice(0, 277)}...`
+      : cleanDescription;
 
   const categoryValue = Array.isArray(item.category)
     ? textContent(item.category[0])
@@ -226,8 +258,9 @@ const parseRssItem = async (item: any, source: RssNewsSource): Promise<Article |
   const category = categoryValue.trim() || source.name;
   const labelSlug = slugify(category) || source.id;
 
+  const guidObjectText = typeof item.guid === 'object' && item.guid !== null ? item.guid["#text"] : undefined;
   const guidValue =
-    textContent(item.guid?.["#text"]) ||
+    textContent(guidObjectText) ||
     textContent(item.guid) ||
     link ||
     title;
@@ -239,14 +272,20 @@ const parseRssItem = async (item: any, source: RssNewsSource): Promise<Article |
   const rawPubDate = textContent(item.pubDate);
   const pubDate = rawPubDate ? new Date(rawPubDate) : null;
   const publishISO =
-    pubDate && !Number.isNaN(pubDate.getTime()) ? pubDate.toISOString() : undefined;
+    pubDate && !Number.isNaN(pubDate.getTime())
+      ? pubDate.toISOString()
+      : undefined;
 
-  const mediaCandidate = item["media:content"] ?? item.content ?? item.enclosure;
-  const media = Array.isArray(mediaCandidate) ? mediaCandidate[0] : mediaCandidate;
+  const mediaCandidate =
+    item["media:content"] ?? item.content ?? item.enclosure;
+  const media = Array.isArray(mediaCandidate)
+    ? mediaCandidate[0]
+    : mediaCandidate;
   let imageUrl = media ? textContent(media.url ?? media["@_url"]) : "";
 
   if (!imageUrl) {
-    const htmlContent = textContent(item["content:encoded"]) || textContent(item.description);
+    const htmlContent =
+      textContent(item["content:encoded"]) || textContent(item.description);
     const imgMatch = htmlContent.match(/<img[^>]+src="([^">]+)"/);
     if (imgMatch) {
       imageUrl = imgMatch[1];
@@ -255,9 +294,9 @@ const parseRssItem = async (item: any, source: RssNewsSource): Promise<Article |
 
   // Fallback: Fetch OG image if still no image
   if (!imageUrl && link) {
-     // Only try fallback for specific sources or if enabled, to avoid too many requests?
-     // For now, try for all.
-     imageUrl = (await fetchOgImage(link)) || "";
+    // Only try fallback for specific sources or if enabled, to avoid too many requests?
+    // For now, try for all.
+    imageUrl = (await fetchOgImage(link)) || "";
   }
 
   return {
@@ -318,8 +357,7 @@ const fetchApiSource = async (
     }
 
     return applyMaxAgeFilter(mapped, source);
-  } catch (error) {
-    console.error(`Error fetching ${source.name} articles:`, error);
+  } catch {
     return [];
   }
 };
@@ -342,8 +380,7 @@ const fetchRssSource = async (source: RssNewsSource): Promise<Article[]> => {
     );
 
     return applyMaxAgeFilter(mapped, source);
-  } catch (error) {
-    console.error(`Error fetching ${source.name} RSS feed:`, error);
+  } catch {
     return [];
   }
 };
@@ -369,11 +406,7 @@ const normalizeSourcesKey = (sources?: string[]): string => {
   }
 
   const uniqueIds = Array.from(
-    new Set(
-      sources
-        .map((id) => id.trim())
-        .filter(Boolean)
-    )
+    new Set(sources.map((id) => id.trim()).filter(Boolean))
   );
 
   if (uniqueIds.length === 0) {
@@ -485,16 +518,18 @@ export async function fetchArticleBySlug(
           )}`;
           attemptedUrls.push(detailUrl);
           try {
-            console.log("Fetching article detail from", detailUrl);
             const res = await fetch(detailUrl, FETCH_OPTIONS);
             if (!res.ok) {
               return null;
             }
             const data = await res.json();
-            const rawArticle: any =
-              data?.item ?? data?.article ?? data?.data ?? data;
+            const rawArticle =
+              (data?.item as Article | undefined) ??
+              (data?.article as Article | undefined) ??
+              (data?.data as Article | undefined) ??
+              (data as Article | undefined);
             return rawArticle
-              ? mapMosaiqueArticle(rawArticle as Article, mosaiqueSource.id)
+              ? mapMosaiqueArticle(rawArticle, mosaiqueSource.id)
               : null;
           } catch {
             return null;
@@ -516,7 +551,11 @@ export async function fetchArticleBySlug(
     const maxPages = 8;
     const pageNumbers = Array.from({ length: maxPages }, (_, idx) => idx + 1);
 
-    for (let index = 0; index < pageNumbers.length; index += ARTICLE_LOOKUP_BATCH_SIZE) {
+    for (
+      let index = 0;
+      index < pageNumbers.length;
+      index += ARTICLE_LOOKUP_BATCH_SIZE
+    ) {
       const batch = pageNumbers.slice(index, index + ARTICLE_LOOKUP_BATCH_SIZE);
       const batchResults = await Promise.all(
         batch.map(async (pageNumber) => fetchPosts(pageNumber))
@@ -535,8 +574,6 @@ export async function fetchArticleBySlug(
         }
       }
     }
-
-    console.log("Article not found for slug:", slug);
 
     return { article: null, attemptedUrls };
   } catch (e) {

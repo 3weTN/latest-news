@@ -6,6 +6,7 @@ import GoogleAnalytics from "./GoogleAnalytics";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import { cn } from "@/lib/utils";
+import { ViewModeProvider } from "@/components/view-mode-provider";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -102,9 +103,11 @@ export default function RootLayout({
       </head>
       <body className={cn("bg-background text-foreground", inter.className)}>
         <ThemeProvider>
-          <GoogleAnalytics />
-          <SiteHeader />
-          {children}
+          <ViewModeProvider>
+            <GoogleAnalytics />
+            <SiteHeader />
+            {children}
+          </ViewModeProvider>
         </ThemeProvider>
       </body>
     </html>
