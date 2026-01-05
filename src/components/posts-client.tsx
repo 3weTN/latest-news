@@ -106,11 +106,24 @@ export default function PostsClient({ initialPosts }: Props) {
 
   useEffect(() => {
     setIsHydrated(true);
+
+    // Restore scroll position if returning from article page
+    const savedScrollPosition = sessionStorage.getItem('homeScrollPosition');
+    if (savedScrollPosition) {
+      const scrollY = parseInt(savedScrollPosition, 10);
+      window.scrollTo(0, scrollY);
+      sessionStorage.removeItem('homeScrollPosition');
+    }
   }, []);
 
   const hrefFor = useCallback((article: Article) => {
     const slugOrId = article.slug ?? String(article.id);
     return `/article/${encodeURIComponent(slugOrId)}`;
+  }, []);
+
+  const handleArticleClick = useCallback(() => {
+    // Save current scroll position before navigating to article
+    sessionStorage.setItem('homeScrollPosition', String(window.scrollY));
   }, []);
 
   const handleFilterChange = useCallback(async (sourceId: string) => {
@@ -206,6 +219,7 @@ export default function PostsClient({ initialPosts }: Props) {
           <article className="mb-8">
             <Link
               href={hrefFor(featured)}
+              onClick={handleArticleClick}
               className="block rounded-lg overflow-hidden shadow-lg group"
               aria-label={`Read ${featured.title}`}
             >
@@ -264,6 +278,7 @@ export default function PostsClient({ initialPosts }: Props) {
                 >
                   <Link
                     href={hrefFor(article)}
+                    onClick={handleArticleClick}
                     className="group block hover:bg-muted/30 p-3 rounded-lg transition-colors"
                     aria-label={`Read ${article.title}`}
                   >
@@ -302,6 +317,7 @@ export default function PostsClient({ initialPosts }: Props) {
               >
                 <Link
                   href={hrefFor(article)}
+                  onClick={handleArticleClick}
                   className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   aria-label={`Read ${article.title}`}
                 >
