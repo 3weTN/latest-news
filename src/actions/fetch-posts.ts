@@ -9,6 +9,7 @@ import {
 import { Article, RssItem } from "@/types";
 import { XMLParser } from "fast-xml-parser";
 import { unstable_cache } from "next/cache";
+import { scrapeArticleContent } from "@/lib/scrape-article";
 
 export type ArticleDetailResult = {
   article: Article | null;
@@ -154,12 +155,13 @@ const fetchOgImage = async (url: string): Promise<string | null> => {
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
       },
       next: { revalidate: 3600 }, // Cache OG lookups for 1 hour
+      signal: AbortSignal.timeout(3000), // 3 second timeout (reduced for parallel fetching)
     });
     if (!response.ok) return null;
     const html = await response.text();
 
     // Try og:image
-    const ogMatch = html.match(/<meta property="og:image" content="([^"]+)"/i);
+    const ogMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
     if (ogMatch) return ogMatch[1];
 
     // Try twitter:image
@@ -292,12 +294,8 @@ const parseRssItem = async (
     }
   }
 
-  // Fallback: Fetch OG image if still no image
-  if (!imageUrl && link) {
-    // Only try fallback for specific sources or if enabled, to avoid too many requests?
-    // For now, try for all.
-    imageUrl = (await fetchOgImage(link)) || "";
-  }
+  // Note: We'll fetch OG images in parallel after all items are parsed
+  // to avoid sequential delays
 
   return {
     tid: hashString(`${source.id}-${category}`),
@@ -378,6 +376,24 @@ const fetchRssSource = async (source: RssNewsSource): Promise<Article[]> => {
     const mapped = (await Promise.all(mappedPromises)).filter(
       (article): article is Article => Boolean(article)
     );
+
+    // Fetch OG images in parallel for articles without images
+    // This is much faster than sequential fetching (especially for La Presse)
+    const articlesNeedingImages = mapped.filter(
+      (article) => !article.image && article.link
+    );
+
+    if (articlesNeedingImages.length > 0) {
+      const imagePromises = articlesNeedingImages.map(async (article) => {
+        const ogImage = await fetchOgImage(article.link);
+        if (ogImage) {
+          article.image = ogImage;
+        }
+      });
+
+      // Wait for all OG image fetches to complete (with individual timeouts)
+      await Promise.all(imagePromises);
+    }
 
     return applyMaxAgeFilter(mapped, source);
   } catch {
@@ -499,6 +515,25 @@ const matchesArticleSlug = (
   );
 };
 
+const getAbsoluteUrl = (url: string, sourceId: string): string => {
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+
+  // Map source IDs to their base URLs
+  const baseUrls: Record<string, string> = {
+    mosaique: 'https://www.mosaiquefm.net',
+    shems: 'https://www.shemsfm.net',
+    tunisienumerique: 'https://www.tunisienumerique.com',
+    kapitalis: 'https://kapitalis.com',
+    lapresse: 'https://lapresse.tn',
+    rtci: 'https://www.rtci.tn',
+  };
+
+  const baseUrl = baseUrls[sourceId] || 'https://www.mosaiquefm.net';
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 export async function fetchArticleBySlug(
   slug: string
 ): Promise<ArticleDetailResult> {
@@ -541,6 +576,14 @@ export async function fetchArticleBySlug(
         (article): article is Article => Boolean(article)
       );
       if (detailArticle) {
+        // Try to scrape full content if not already present
+        if (!detailArticle.content && !detailArticle.body && !detailArticle.article && detailArticle.link) {
+          const fullUrl = getAbsoluteUrl(detailArticle.link, mosaiqueSource.id);
+          const scraped = await scrapeArticleContent(fullUrl, mosaiqueSource.id);
+          if (scraped.success && scraped.content) {
+            detailArticle.content = scraped.content;
+          }
+        }
         return { article: detailArticle, attemptedUrls };
       }
     }
@@ -570,6 +613,14 @@ export async function fetchArticleBySlug(
           matchesArticleSlug(candidate, decoded, slug)
         );
         if (found) {
+          // Try to scrape full content if not already present
+          if (!found.content && !found.body && !found.article && found.link && found.source) {
+            const fullUrl = getAbsoluteUrl(found.link, found.source);
+            const scraped = await scrapeArticleContent(fullUrl, found.source);
+            if (scraped.success && scraped.content) {
+              found.content = scraped.content;
+            }
+          }
           return { article: found, attemptedUrls };
         }
       }
