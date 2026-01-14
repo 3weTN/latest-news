@@ -1,6 +1,7 @@
 import { fetchArticleBySlug } from "@/actions/fetch-posts";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import { getArticlePublishDate } from "@/lib/article-date";
+import { NEWS_SOURCES } from "@/config/sources";
 import { SITE_URL } from "@/config/site";
 import Link from "next/link";
 import { Metadata, ResolvingMetadata } from "next";
@@ -164,6 +165,10 @@ export default async function Page({ params }: Props) {
           article.link
         }`
     : undefined;
+  const sourceInfo = article.source
+    ? NEWS_SOURCES.find((source) => source.id === article.source)
+    : undefined;
+  const sourceLabel = sourceInfo?.name ?? article.source ?? null;
 
   const publishDate = getArticlePublishDate(article);
 
@@ -245,6 +250,24 @@ export default async function Page({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
 
+        {sourceLabel && (
+          <p className="mb-2 text-sm text-muted-foreground text-right">
+            Source:{" "}
+            {sourceUrl ? (
+              <a
+                href={sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary"
+              >
+                {sourceLabel}
+              </a>
+            ) : (
+              sourceLabel
+            )}
+          </p>
+        )}
+
         <h1 className="text-2xl md:text-3xl font-bold mb-4 text-right">
           {article.title}
         </h1>
@@ -293,18 +316,6 @@ export default async function Page({ params }: Props) {
             <p>{plainText}</p>
           )}
 
-          {sourceUrl && (
-            <p className="mt-4">
-              <a
-                href={sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary"
-              >
-                Read original source
-              </a>
-            </p>
-          )}
         </div>
       </article>
     </main>
