@@ -6,10 +6,11 @@ import {
   NewsSource,
   RssNewsSource,
 } from "@/config/sources";
-import { Article, RssItem } from "@/types";
+import { Article, ArticleSummary, RssItem } from "@/types";
 import { XMLParser } from "fast-xml-parser";
 import { unstable_cache } from "next/cache";
 import { scrapeArticleContent } from "@/lib/scrape-article";
+import { cache } from "react";
 
 export type ArticleDetailResult = {
   article: Article | null;
@@ -18,6 +19,7 @@ export type ArticleDetailResult = {
 
 export interface FetchPostsOptions {
   sources?: string[];
+  fields?: "summary";
 }
 
 const FETCH_OPTIONS = {
@@ -416,6 +418,21 @@ const fetchArticlesForSource = async (
   return fetchRssSource(source);
 };
 
+const toArticleSummary = (article: Article): ArticleSummary => ({
+  id: article.id,
+  slug: article.slug,
+  title: article.title,
+  intro: article.intro,
+  image: article.image,
+  seoAlt: article.seoAlt,
+  label: article.label,
+  source: article.source,
+  startPublish: article.startPublish,
+  date: article.date,
+  created: article.created,
+  updated: article.updated,
+});
+
 const normalizeSourcesKey = (sources?: string[]): string => {
   if (!sources || sources.length === 0) {
     return ALL_SOURCES_KEY;
@@ -491,10 +508,23 @@ const cachedLoadPosts = unstable_cache(
 
 export async function fetchPosts(
   page: number,
+  options: FetchPostsOptions & { fields: "summary" }
+): Promise<ArticleSummary[] | null>;
+export async function fetchPosts(
+  page: number,
   options?: FetchPostsOptions
-): Promise<Article[] | null> {
+): Promise<Article[] | null>;
+export async function fetchPosts(
+  page: number,
+  options?: FetchPostsOptions
+): Promise<Article[] | ArticleSummary[] | null> {
   const sourcesKey = normalizeSourcesKey(options?.sources);
-  return cachedLoadPosts(page, sourcesKey);
+  const posts = await cachedLoadPosts(page, sourcesKey);
+  if (!posts) return null;
+  if (options?.fields === "summary") {
+    return posts.map(toArticleSummary);
+  }
+  return posts;
 }
 
 const matchesArticleSlug = (
@@ -534,9 +564,9 @@ const getAbsoluteUrl = (url: string, sourceId: string): string => {
   return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
-export async function fetchArticleBySlug(
+const fetchArticleBySlugUncached = async (
   slug: string
-): Promise<ArticleDetailResult> {
+): Promise<ArticleDetailResult> => {
   const attemptedUrls: string[] = [];
   const isNumeric = /^\d+$/.test(slug);
 
@@ -630,4 +660,6 @@ export async function fetchArticleBySlug(
   } catch (e) {
     return { article: null, attemptedUrls };
   }
-}
+};
+
+export const fetchArticleBySlug = cache(fetchArticleBySlugUncached);

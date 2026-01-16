@@ -58,3 +58,19 @@ export interface Article {
   article?: string;
   source?: string;
 }
+
+export type ArticleSummary = Pick<
+  Article,
+  | "id"
+  | "slug"
+  | "title"
+  | "intro"
+  | "image"
+  | "seoAlt"
+  | "label"
+  | "source"
+  | "startPublish"
+  | "date"
+  | "created"
+  | "updated"
+>;

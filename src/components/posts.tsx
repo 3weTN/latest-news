@@ -8,17 +8,17 @@ import {
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import { getArticlePublishDate } from "@/lib/article-date";
 import { NEWS_SOURCES, type NewsSource } from "@/config/sources";
-import { Article } from "@/types";
+import { ArticleSummary } from "@/types";
 import Link from "next/link";
 
 export interface PostProps {
-  posts: Article[] | null;
+  posts: ArticleSummary[] | null;
   /** When false, don't render the large featured hero (useful for infinite-loaded batches) */
   showFeatured?: boolean;
 }
 
 export function Posts({ posts, showFeatured = true }: PostProps) {
-  const hrefFor = (article: Article) => {
+  const hrefFor = (article: ArticleSummary) => {
     const slugOrId = article.slug ?? String(article.id);
     return `/article/${encodeURIComponent(slugOrId)}`;
   };
@@ -27,8 +27,8 @@ export function Posts({ posts, showFeatured = true }: PostProps) {
     return <div className="text-xl font-bold text-muted-foreground">No posts available</div>;
   }
 
-  let featured: Article | null = null;
-  let gridPosts: Article[] = posts;
+  let featured: ArticleSummary | null = null;
+  let gridPosts: ArticleSummary[] = posts;
 
   if (showFeatured && posts.length > 0) {
     featured = posts[0];

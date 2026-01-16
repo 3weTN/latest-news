@@ -3,33 +3,36 @@
 import { fetchPosts } from "@/actions/fetch-posts";
 import { Posts } from "@/components/posts";
 import { Spinner } from "@/components/ui/spinner";
-import { Article } from "@/types";
-import { useEffect, useState } from "react";
+import { ArticleSummary } from "@/types";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
 
 export function LoadMore() {
-  const [posts, setPosts] = useState<Article[]>([]);
+  const [posts, setPosts] = useState<ArticleSummary[]>([]);
   const [page, setPage] = useState(1);
+  const pageRef = useRef(page);
 
   const { ref, inView } = useInView();
 
-  const delay = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
+  useEffect(() => {
+    pageRef.current = page;
+  }, [page]);
 
-  const loadMorePosts = async () => {
+  const loadMorePosts = useCallback(async () => {
     // Once the page 8 is reached repeat the process all over again.
-    await delay(2000);
-    const nextPage = (page % 7) + 1;
-    const newPosts = (await fetchPosts(nextPage)) ?? [];
-    setPosts((prevProducts: Article[]) => [...prevProducts, ...newPosts]);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const nextPage = (pageRef.current % 7) + 1;
+    const newPosts =
+      (await fetchPosts(nextPage, { fields: "summary" })) ?? [];
+    setPosts((prevProducts) => [...prevProducts, ...newPosts]);
     setPage(nextPage);
-  };
+  }, []);
 
   useEffect(() => {
     if (inView) {
       loadMorePosts();
     }
-  }, [inView]);
+  }, [inView, loadMorePosts]);
 
   return (
     <>

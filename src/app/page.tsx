@@ -2,7 +2,7 @@ import { fetchPosts } from "@/actions/fetch-posts";
 import PostsClient from "@/components/posts-client";
 
 const PostsPage = async () => {
-  const posts = await fetchPosts(1);
+  const posts = await fetchPosts(1, { fields: "summary" });
 
   return (
     <main className="container mx-auto px-4 py-10 min-h-screen">

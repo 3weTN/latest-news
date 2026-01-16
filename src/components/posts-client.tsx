@@ -13,18 +13,18 @@ import { Spinner } from "@/components/ui/spinner";
 import { NEWS_SOURCES, type NewsSource } from "@/config/sources";
 import { getArticlePublishDate } from "@/lib/article-date";
 import { cn } from "@/lib/utils";
-import { Article } from "@/types";
+import { ArticleSummary } from "@/types";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { useViewMode } from "@/components/view-mode-provider";
 
 interface Props {
-  initialPosts: Article[] | null;
+  initialPosts: ArticleSummary[] | null;
 }
 
 export default function PostsClient({ initialPosts }: Props) {
-  const [posts, setPosts] = useState<Article[]>(initialPosts ?? []);
+  const [posts, setPosts] = useState<ArticleSummary[]>(initialPosts ?? []);
   const [page, setPage] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const [hasLoadedMore, setHasLoadedMore] = useState(false);
@@ -59,7 +59,10 @@ export default function PostsClient({ initialPosts }: Props) {
       const sourcesFilter =
         selectedSource === "all" ? undefined : [selectedSource];
       const newPosts =
-        (await fetchPosts(nextPage, { sources: sourcesFilter })) ?? [];
+        (await fetchPosts(nextPage, {
+          sources: sourcesFilter,
+          fields: "summary",
+        })) ?? [];
       setPosts((p) => [...p, ...newPosts]);
       setPage(nextPage);
       setHasLoadedMore(true);
@@ -78,7 +81,10 @@ export default function PostsClient({ initialPosts }: Props) {
 
   const fetchFirstPage = useCallback(async (sourceId: string) => {
     const sourcesFilter = sourceId === "all" ? undefined : [sourceId];
-    return (await fetchPosts(1, { sources: sourcesFilter })) ?? [];
+    return (
+      (await fetchPosts(1, { sources: sourcesFilter, fields: "summary" })) ??
+      []
+    );
   }, []);
 
   const refreshCurrentSource = useCallback(async () => {
@@ -116,7 +122,7 @@ export default function PostsClient({ initialPosts }: Props) {
     }
   }, []);
 
-  const hrefFor = useCallback((article: Article) => {
+  const hrefFor = useCallback((article: ArticleSummary) => {
     const slugOrId = article.slug ?? String(article.id);
     return `/article/${encodeURIComponent(slugOrId)}`;
   }, []);

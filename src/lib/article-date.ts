@@ -1,5 +1,10 @@
 import { Article, ArticleStartPublish } from "@/types";
 
+type ArticleDateFields = Pick<
+  Article,
+  "startPublish" | "date" | "created" | "updated"
+>;
+
 type ArticleDateSource =
   | Article["startPublish"]
   | Article["date"]
@@ -119,7 +124,7 @@ export interface ArticlePublishDate {
 }
 
 export function getArticlePublishDate(
-  article: Article
+  article: ArticleDateFields
 ): ArticlePublishDate | null {
   const sources: ArticleDateSource[] = [
     article.startPublish ?? null,
