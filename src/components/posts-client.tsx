@@ -19,6 +19,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { useViewMode } from "@/components/view-mode-provider";
 
+const cardVisibilityStyle = {
+  contentVisibility: "auto",
+  containIntrinsicSize: "1px 320px",
+} as const;
+
+const listItemVisibilityStyle = {
+  contentVisibility: "auto",
+  containIntrinsicSize: "1px 140px",
+} as const;
+
 interface Props {
   initialPosts: ArticleSummary[] | null;
 }
@@ -105,7 +115,7 @@ export default function PostsClient({ initialPosts }: Props) {
   useEffect(() => {
     const timer = setInterval(() => {
       refreshCurrentSource();
-    }, 60_000);
+    }, 30_000);
 
     return () => clearInterval(timer);
   }, [refreshCurrentSource]);
@@ -281,6 +291,7 @@ export default function PostsClient({ initialPosts }: Props) {
                 <article
                   key={`${article.id}-${index}`}
                   className="border-b border-border pb-3 last:border-b-0"
+                  style={listItemVisibilityStyle}
                 >
                   <Link
                     href={hrefFor(article)}
@@ -320,6 +331,7 @@ export default function PostsClient({ initialPosts }: Props) {
               <Card
                 key={`${article.id}-${index}`}
                 className="overflow-hidden transform transition duration-200 will-change-transform hover:-translate-y-1 hover:shadow-xl shadow-sm border-border/70"
+                style={cardVisibilityStyle}
               >
                 <Link
                   href={hrefFor(article)}

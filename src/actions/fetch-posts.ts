@@ -8,9 +8,7 @@ import {
 } from "@/config/sources";
 import { Article, ArticleSummary, RssItem } from "@/types";
 import { XMLParser } from "fast-xml-parser";
-import { unstable_cache } from "next/cache";
 import { scrapeArticleContent } from "@/lib/scrape-article";
-import { cache } from "react";
 
 export type ArticleDetailResult = {
   article: Article | null;
@@ -38,8 +36,6 @@ const xmlParser = new XMLParser({
 });
 
 const ALL_SOURCES_KEY = "__all__";
-const POSTS_CACHE_TAG = "fetch-posts";
-const POSTS_CACHE_REVALIDATE_SECONDS = 60;
 const ARTICLE_LOOKUP_BATCH_SIZE = 2;
 const MOSAIQUE_DETAIL_LANGS = ["ar", "fr"] as const;
 
@@ -495,17 +491,6 @@ const loadPosts = async (
   return combined;
 };
 
-const cachedLoadPosts = unstable_cache(
-  async (page: number, sourcesKey: string) => {
-    const requestedSources = parseSourcesKey(sourcesKey);
-    return loadPosts(page, requestedSources);
-  },
-  [POSTS_CACHE_TAG],
-  {
-    revalidate: POSTS_CACHE_REVALIDATE_SECONDS,
-  }
-);
-
 export async function fetchPosts(
   page: number,
   options: FetchPostsOptions & { fields: "summary" }
@@ -519,7 +504,8 @@ export async function fetchPosts(
   options?: FetchPostsOptions
 ): Promise<Article[] | ArticleSummary[] | null> {
   const sourcesKey = normalizeSourcesKey(options?.sources);
-  const posts = await cachedLoadPosts(page, sourcesKey);
+  const requestedSources = parseSourcesKey(sourcesKey);
+  const posts = await loadPosts(page, requestedSources);
   if (!posts) return null;
   if (options?.fields === "summary") {
     return posts.map(toArticleSummary);
@@ -662,4 +648,4 @@ const fetchArticleBySlugUncached = async (
   }
 };
 
-export const fetchArticleBySlug = cache(fetchArticleBySlugUncached);
+export const fetchArticleBySlug = fetchArticleBySlugUncached;

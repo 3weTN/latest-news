@@ -1,6 +1,8 @@
 import { fetchPosts } from "@/actions/fetch-posts";
 import PostsClient from "@/components/posts-client";
 
+export const dynamic = "force-dynamic";
+
 const PostsPage = async () => {
   const posts = await fetchPosts(1, { fields: "summary" });
 

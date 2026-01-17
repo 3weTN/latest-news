@@ -70,25 +70,10 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
         <link
           rel="preconnect"
-          href="https://content.mosaiquefm.net"
-          crossOrigin=""
-        />
-        <link
-          rel="preconnect"
           href="https://cdn.mosaiquefm.net"
           crossOrigin=""
         />
         <link rel="preconnect" href="https://api.mosaiquefm.net" crossOrigin="" />
-        <link
-          rel="preconnect"
-          href="https://www.googletagmanager.com"
-          crossOrigin=""
-        />
-        <link
-          rel="preconnect"
-          href="https://www.google-analytics.com"
-          crossOrigin=""
-        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
